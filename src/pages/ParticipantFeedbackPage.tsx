@@ -22,8 +22,7 @@ export default function ParticipantFeedbackPage() {
   useEffect(() => {
     ;(async () => {
       try {
-        const base = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000'
-        const res = await fetch(`${base}/api/data`)
+        const res = await fetch('/api/data')
         const data = await res.json()
         const reviews = Array.isArray(data.reviews) ? data.reviews : []
         setItems(reviews)
@@ -48,7 +47,7 @@ export default function ParticipantFeedbackPage() {
       : (selectedIndex + 1) % imageItems.length
     
     setSelectedIndex(newIndex)
-    setSelectedImage(`${(import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000'}${imageItems[newIndex].path}`)
+    setSelectedImage(imageItems[newIndex].path)
   }
 
   const handleDelete = async (itemId: string, itemName: string) => {
@@ -57,10 +56,9 @@ export default function ParticipantFeedbackPage() {
     }
 
     try {
-      const base = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000'
       const token = localStorage.getItem('dashboard_token')
       
-      const response = await fetch(`${base}/api/reviews/${itemId}`, {
+      const response = await fetch(`/api/reviews/${itemId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -121,10 +119,10 @@ export default function ParticipantFeedbackPage() {
               className="relative group cursor-pointer aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800 hover:shadow-xl hover:scale-[1.02] transition-all duration-300"
             >
                 <img 
-                src={`${(import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000'}${item.path}`} 
+                src={item.path} 
                 alt={item.eventName || `Feedback ${index + 1}`}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                onClick={() => openModal(`${(import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000'}${item.path}`, index)}
+                onClick={() => openModal(item.path, index)}
               />              {/* Hover overlay with enhanced visibility */}
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300" />
               
@@ -137,7 +135,7 @@ export default function ParticipantFeedbackPage() {
                     className="h-8 w-8 bg-white/20 hover:bg-white/40 backdrop-blur-sm"
                     onClick={(e) => {
                       e.stopPropagation()
-                      openModal(`${(import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000'}${item.path}`, index)
+                      openModal(item.path, index)
                     }}
                   >
                     <Eye className="h-4 w-4 text-white" />

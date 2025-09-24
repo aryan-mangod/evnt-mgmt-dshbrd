@@ -9,7 +9,7 @@ yarn-error.log*
 build/
 *.tsbuildinfo
 
-# Environment variables
+# Environment variables (keep .env.production and .env.development for deployment)
 .env
 .env.local
 .env.development.local
