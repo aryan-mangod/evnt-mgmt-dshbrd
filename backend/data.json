@@ -1,0 +1,420 @@
+{
+  "tracks": [
+    {
+      "sr": 1,
+      "trackName": "Activate GenAI With Azure",
+      "testingStatus": "Completed",
+      "releaseNotes": "Initial release"
+    },
+    {
+      "sr": 2,
+      "trackName": "Automate Document Processing using Azure OpenAI",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 3,
+      "trackName": "Azure API Management",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 4,
+      "trackName": "Build Intelligent Apps With Microsoft's Copilot Stack & Azure OpenAI",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes",
+      "releaseUrl": "https://example.com/release/4"
+    },
+    {
+      "sr": 5,
+      "trackName": "Build Prompt Engineering With Azure OpenAI Service",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 6,
+      "trackName": "Business Automation with Azure OpenAI and Document Intelligence",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 7,
+      "trackName": "Cloud Native Applications",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 8,
+      "trackName": "Cloud Scale Analytics With Microsoft Fabric",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 9,
+      "trackName": "Create And Publish PowerBI Dashboards & Reports",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 10,
+      "trackName": "Develop Generative AI Solutions With Azure OpenAI Service",
+      "testingStatus": "In-progress",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 11,
+      "trackName": "Developing AI Applications with Azure AI Foundry",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 12,
+      "trackName": "DevOps With GitHub",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 13,
+      "trackName": "Fabric – Analyst In a Day",
+      "testingStatus": "In-progress",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 14,
+      "trackName": "Get Started With OpenAI And Build Natural Language Solution",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 15,
+      "trackName": "GitHub Copilot – Hackathon",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 16,
+      "trackName": "GitHub Copilot Innovation Workshop",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 17,
+      "trackName": "Implement CI/CD with GitHub Actions",
+      "testingStatus": "In-progress",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 18,
+      "trackName": "Innovate With AI",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 19,
+      "trackName": "Intelligent App Development With Microsoft Copilot Stack",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 20,
+      "trackName": "Introduction To Building AI Apps",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 21,
+      "trackName": "Low-Code for Pro-Dev in a Day",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 22,
+      "trackName": "Microsoft Azure AI Agents: Hands-on Lab",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 23,
+      "trackName": "MS Fabric Foundation For Enterprise Analytics",
+      "testingStatus": "In-progress",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 24,
+      "trackName": "Securing Repositories with GitHub Advanced Security",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes"
+    },
+    {
+      "sr": 25,
+      "trackName": "Use Azure OpenAI Like A Pro To Build Powerful AI Applications",
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes"
+    }
+  ],
+  "tokens": [
+    {
+      "token": "a8abe712ad6cf48d0e860a19f730d1b381ba581c197e5a06",
+      "userId": null,
+      "role": "admin"
+    },
+    {
+      "token": "a769a6fa2a0e5769ebf04db454d9810b21e17bbc149f8ba9",
+      "userId": "admin",
+      "role": "admin"
+    },
+    {
+      "token": "479c3fbd89bb3b8b0c7e3348b0d5d9d2610fb096c2b69791",
+      "userId": "admin",
+      "role": "admin"
+    },
+    {
+      "token": "6fb59d22ccdfa7f39d6bed52140bafcb95628e48616bf0c3",
+      "userId": "u_1756373666632",
+      "role": "user"
+    },
+    {
+      "token": "b109f49b88ddcf27d7af4568ee0c19d55bf3483af038b20d",
+      "userId": "admin",
+      "role": "admin"
+    },
+    {
+      "token": "febae5e4545cc66851c4b4f6762ede5f1d533556f24f3a3d",
+      "userId": "u_1756373666632",
+      "role": "user"
+    },
+    {
+      "token": "4316b42688b09b911525cec05249fe261e4fc0b3cd8ff372",
+      "userId": "admin",
+      "role": "admin"
+    },
+    {
+      "token": "6aee9bc5cd3b437ccb49ee890598286b9572e106308c226a",
+      "userId": "u_1756373666632",
+      "role": "user"
+    },
+    {
+      "token": "7feeb132f683a6e5d7c820b25f91727e9d3249120f8917a6",
+      "userId": "admin",
+      "role": "admin"
+    },
+    {
+      "token": "742daf5b38c45e7657fba4b444f6359a20611e2a5e03a443",
+      "userId": "admin",
+      "role": "admin",
+      "expiresAt": 1759309131079
+    }
+  ],
+  "events": [
+    {
+      "sr": 1,
+      "title": "Low Code Development With Power Apps & Power Automate",
+      "date": "18th August 2025",
+      "status": "confirmed",
+      "upcoming": true,
+      "language": "English",
+      "expectedParticipants": 10000,
+      "ticketsSold": 95,
+      "rating": 4.4,
+      "revenue": 12500,
+      "name": "Low Code Development With Power Apps & Power Automate"
+    },
+    {
+      "sr": 2,
+      "title": "Hybrid Cloud Solution (Azure Arc)",
+      "date": "20th August 2025",
+      "status": "confirmed",
+      "upcoming": true,
+      "language": "English",
+      "expectedParticipants": 220,
+      "ticketsSold": 140,
+      "rating": 4.2,
+      "revenue": 18400
+    },
+    {
+      "sr": 3,
+      "title": "Power Platform – App In A Day",
+      "date": "20th August 2025",
+      "status": "confirmed",
+      "upcoming": true,
+      "language": "English",
+      "expectedParticipants": 150,
+      "ticketsSold": 110,
+      "rating": 4.6,
+      "revenue": 13250
+    },
+    {
+      "sr": 4,
+      "title": "Build A Fabric Real-Time Intelligence Solution in a Day",
+      "date": "20th August 2025",
+      "status": "confirmed",
+      "upcoming": true,
+      "language": "English",
+      "expectedParticipants": 200,
+      "ticketsSold": 80,
+      "rating": 4.1,
+      "revenue": 9600
+    },
+    {
+      "sr": 5,
+      "title": "Advanced Workflow Automation with GitHub Actions",
+      "date": "21st August 2025",
+      "status": "confirmed",
+      "upcoming": true,
+      "language": "English",
+      "expectedParticipants": 170,
+      "ticketsSold": 120,
+      "rating": 4.5,
+      "revenue": 14750
+    },
+    {
+      "sr": 6,
+      "title": "Azure Arc Enabled SQL Servers – Single Pane Of Glass",
+      "date": "21st August 2025",
+      "status": "confirmed",
+      "upcoming": true,
+      "language": "English",
+      "expectedParticipants": 130,
+      "ticketsSold": 75,
+      "rating": 3.9,
+      "revenue": 8900
+    },
+    {
+      "Title": "AI Summit",
+      "Language": "English",
+      "Status": "Confirmed",
+      "Date": "2025-09-15",
+      "ExpectedParticipants": "150"
+    },
+    {
+      "Title": "Cloud Native Workshop",
+      "Language": "Spanish",
+      "Status": "Confirmed",
+      "Date": "2025-09-20",
+      "ExpectedParticipants": "80"
+    },
+    {
+      "Title": "Security Best Practices",
+      "Language": "Portuguese",
+      "Status": "Confirmed",
+      "Date": "2025-09-25",
+      "ExpectedParticipants": "60"
+    }
+  ],
+  "catalog": [
+    {
+      "sr": 1,
+      "type": "localizedTrack",
+      "trackTitle": "GitHub Copilot Innovation Workshop",
+      "spanish": "Available",
+      "portuguese": "Available",
+      "simplifiedChinese": "In Progress",
+      "traditionalChinese": "In Progress",
+      "japanese": "Not Available",
+      "trackName": "GitHub Copilot Innovation Workshop",
+      "eventDate": "12-08-2025",
+      "status": "Completed",
+      "notesETA": "14th August"
+    },
+    {
+      "sr": 2,
+      "type": "localizedTrack",
+      "trackTitle": "Build Intelligent Apps with Microsoft's Copilot Stack & Azure OpenAI",
+      "spanish": "Available",
+      "portuguese": "Available",
+      "simplifiedChinese": "Not Available",
+      "traditionalChinese": "Not Available",
+      "japanese": "Not Available",
+      "trackName": "Build Intelligent Apps with Microsoft's Copilot Stack & Azure OpenAI",
+      "eventDate": "",
+      "status": "Completed",
+      "notesETA": ""
+    },
+    {
+      "sr": 3,
+      "type": "localizedTrack",
+      "trackTitle": "Low Code Development With Power Apps & Power Automate",
+      "eventDate": "18th August 2025",
+      "status": "In-progress",
+      "notesETA": "15th August"
+    },
+    {
+      "sr": 4,
+      "type": "localizedTrack",
+      "trackTitle": "Hybrid Cloud Solution (Azure Arc)",
+      "eventDate": "20th August 2025",
+      "status": "In-progress",
+      "notesETA": "15th August"
+    },
+    {
+      "sr": 5,
+      "type": "localizedTrack",
+      "trackTitle": "Power Platform – App In A Day",
+      "eventDate": "20th August 2025",
+      "status": "In-progress",
+      "notesETA": "15th August"
+    },
+    {
+      "sr": 6,
+      "type": "localizedTrack",
+      "trackTitle": "Build A Fabric Real-Time Intelligence Solution in a Day",
+      "eventDate": "20th August 2025",
+      "status": "In-progress",
+      "notesETA": "15th August"
+    },
+    {
+      "sr": 7,
+      "type": "localizedTrack",
+      "trackTitle": "Advanced Workflow Automation with GitHub Actions",
+      "eventDate": "21st August 2025",
+      "status": "In-progress",
+      "notesETA": "15th August"
+    },
+    {
+      "sr": 8,
+      "type": "localizedTrack",
+      "trackTitle": "Azure Arc Enabled SQL Servers – Single Pane Of Glass",
+      "eventDate": "21st August 2025",
+      "status": "In-progress",
+      "notesETA": "15th August"
+    },
+    {
+      "id": 0,
+      "trackTitle": "Build Agents with Langchain and Azure AI",
+      "phase": "Development",
+      "eta": "15th October 2025",
+      "type": "roadmapItem",
+      "sr": 9
+    }
+  ],
+  "users": [
+    {
+      "id": "admin",
+      "username": "admin",
+      "password": "password",
+      "role": "admin"
+    },
+    {
+      "id": "u_1758704381269",
+      "username": "Kingson",
+      "password": "$2a$08$/Bw9A/fZpWyyG/5dUF5lEeabQdv3TCZSmTc.BwHNosKzoxAL3/V2a",
+      "role": "admin",
+      "mustReset": true
+    }
+  ],
+  "metrics": {
+    "tracksDelivered": 58,
+    "techEvents": 56,
+    "nonTechEvents": 6,
+    "languagesCovered": 2,
+    "topTracks": [],
+    "dashboard.completedEvents": 60,
+    "completed.tracksDelivered": 60,
+    "upcoming.count": 8,
+    "completed.techEvents": 52,
+    "completed.nonTechEvents": 6,
+    "completed.languagesCovered": 2,
+    "dashboard.upcomingEvents": 8,
+    "dashboard.avgSatisfaction": 4.2
+  }
+}
