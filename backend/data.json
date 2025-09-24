@@ -199,10 +199,10 @@
       "role": "admin"
     },
     {
-      "token": "742daf5b38c45e7657fba4b444f6359a20611e2a5e03a443",
-      "userId": "admin",
+      "token": "955f9fd08eacfe17599ad783a1b419ca1afa89dc8bcdc395",
+      "userId": "u_1758721534627",
       "role": "admin",
-      "expiresAt": 1759309131079
+      "expiresAt": 1759326372596
     }
   ],
   "events": [
@@ -391,6 +391,7 @@
     {
       "id": "admin",
       "username": "admin",
+      "email": "admin@events.com",
       "password": "password",
       "role": "admin"
     },
@@ -400,6 +401,14 @@
       "password": "$2a$08$/Bw9A/fZpWyyG/5dUF5lEeabQdv3TCZSmTc.BwHNosKzoxAL3/V2a",
       "role": "admin",
       "mustReset": true
+    },
+    {
+      "id": "u_1758721534627",
+      "username": "Aryan",
+      "email": "aryan.p@spektrasystems.com",
+      "password": "$2a$08$7xQmQqxLS8nd0m1MtMWwGezZtRnym77/KvSyZzXETfmjoqEQazUHO",
+      "role": "admin",
+      "mustReset": false
     }
   ],
   "metrics": {

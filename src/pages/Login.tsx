@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { useNavigate } from 'react-router-dom'
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const navigate = useNavigate()
@@ -14,14 +14,14 @@ export default function LoginPage() {
   const handleLogin = async () => {
     setError('')
     try {
-      const res = await api.post('/api/login', { username, password })
+      const res = await api.post('/api/login', { email, password })
       if (res.data && res.data.token) {
   localStorage.setItem('dashboard_token', res.data.token)
   if (res.data.role) localStorage.setItem('dashboard_role', String(res.data.role))
         window.location.href = '/'
       } else if (res.data && res.data.mustReset) {
-        // Redirect to reset password flow, pass username so the reset page can prefill
-        navigate('/reset-password', { state: { username } })
+        // Redirect to reset password flow, pass email so the reset page can prefill
+        navigate('/reset-password', { state: { email } })
       } else {
         setError('Invalid response')
       }
@@ -45,14 +45,26 @@ export default function LoginPage() {
         {error && <div className="text-sm text-red-500 mb-2">{error}</div>}
         <div className="space-y-4">
           <div>
-            <Label htmlFor="username">Username</Label>
-            <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} />
+            <Label htmlFor="email">Email</Label>
+            <Input 
+              id="email" 
+              type="email" 
+              placeholder="Enter your email"
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+            />
           </div>
           <div>
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Input 
+              id="password" 
+              type="password" 
+              placeholder="Enter your password"
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+            />
           </div>
-          <Button onClick={handleLogin}>Sign in</Button>
+          <Button onClick={handleLogin} className="w-full">Sign in</Button>
         </div>
       </div>
     </div>

@@ -8,8 +8,8 @@ import { useLocation, useNavigate } from 'react-router-dom'
 export default function ResetPasswordPage() {
   const nav = useNavigate()
   const loc = useLocation()
-  const state = (loc.state || {}) as { username?: string }
-  const [username, setUsername] = useState(state.username || '')
+  const state = (loc.state || {}) as { email?: string }
+  const [email, setEmail] = useState(state.email || '')
   const [oldPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [error, setError] = useState('')
@@ -17,7 +17,7 @@ export default function ResetPasswordPage() {
   const handleReset = async () => {
     setError('')
     try {
-      const res = await api.post('/api/reset-password', { username, oldPassword, newPassword })
+      const res = await api.post('/api/reset-password', { email, oldPassword, newPassword })
       if (res.data && res.data.token) {
         localStorage.setItem('dashboard_token', res.data.token)
         if (res.data.role) localStorage.setItem('dashboard_role', String(res.data.role))
@@ -44,18 +44,36 @@ export default function ResetPasswordPage() {
         {error && <div className="text-sm text-red-500 mb-2">{error}</div>}
         <div className="space-y-4">
           <div>
-            <Label htmlFor="username">Username</Label>
-            <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} />
+            <Label htmlFor="email">Email</Label>
+            <Input 
+              id="email" 
+              type="email" 
+              placeholder="Enter your email"
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+            />
           </div>
           <div>
             <Label htmlFor="oldPassword">Temporary Password</Label>
-            <Input id="oldPassword" type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} />
+            <Input 
+              id="oldPassword" 
+              type="password" 
+              placeholder="Enter your temporary password"
+              value={oldPassword} 
+              onChange={(e) => setOldPassword(e.target.value)} 
+            />
           </div>
           <div>
             <Label htmlFor="newPassword">New Password</Label>
-            <Input id="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            <Input 
+              id="newPassword" 
+              type="password" 
+              placeholder="Enter your new password"
+              value={newPassword} 
+              onChange={(e) => setNewPassword(e.target.value)} 
+            />
           </div>
-          <Button onClick={handleReset}>Reset Password</Button>
+          <Button onClick={handleReset} className="w-full">Reset Password</Button>
         </div>
       </div>
     </div>

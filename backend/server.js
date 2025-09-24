@@ -170,9 +170,15 @@ function ensureDataSchema() {
   // If no users exist, create a default admin (dev only)
   if (data.users.length === 0) {
     const hashed = bcrypt.hashSync('password', 8);
-    const defaultAdmin = { id: 'admin', username: 'admin', password: hashed, role: 'admin' };
+    const defaultAdmin = { 
+      id: 'admin', 
+      username: 'admin', 
+      email: 'admin@example.com', 
+      password: hashed, 
+      role: 'admin' 
+    };
     data.users.push(defaultAdmin);
-    console.warn('No users found in data.json — creating default admin: admin/password (hashed)');
+    console.warn('No users found in data.json — creating default admin: admin@example.com/password (hashed)');
     changed = true;
   }
   if (changed) writeData(data);
@@ -213,15 +219,24 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// Simple login endpoint (development): POST /api/login { username, password }
-// Hardcoded credential: admin / password (change in production)
-// Login: validate user credentials against stored users; return token object with role
+// Login endpoint: POST /api/login { email, password } or { username, password }
+// Supports login with either email or username for backward compatibility
 app.post('/api/login', (req, res) => {
-  const { username, password } = req.body || {};
+  const { email, username, password } = req.body || {};
+  const loginField = email || username; // Use email if provided, otherwise username
   try {
     const data = readData();
-  const user = Array.isArray(data.users) && data.users.find((u) => u && String(u.username) === String(username));
-  if (!user) return res.status(401).json({ success: false, error: 'Invalid credentials' });
+    // Find user by email or username
+    const user = Array.isArray(data.users) && data.users.find((u) => {
+      if (!u) return false;
+      // If email is provided, search by email; otherwise search by username
+      if (email) {
+        return String(u.email || '').toLowerCase() === String(email).toLowerCase();
+      } else {
+        return String(u.username || '') === String(username);
+      }
+    });
+    if (!user) return res.status(401).json({ success: false, error: 'Invalid credentials' });
     // verify password: support hashed passwords and fallback to plaintext migration
     const provided = String(password || '');
     let ok = false;
@@ -262,14 +277,23 @@ app.post('/api/login', (req, res) => {
   }
 });
 
-// Self-service password reset: user provides username, oldPassword (temporary) and newPassword
+// Self-service password reset: user provides email/username, oldPassword (temporary) and newPassword
 app.post('/api/reset-password', (req, res) => {
-  const { username, oldPassword, newPassword } = req.body || {};
-  if (!username || !oldPassword || !newPassword) return res.status(400).json({ success: false, error: 'Missing parameters' });
+  const { email, username, oldPassword, newPassword } = req.body || {};
+  const loginField = email || username;
+  if (!loginField || !oldPassword || !newPassword) return res.status(400).json({ success: false, error: 'Missing parameters' });
   try {
     const data = readData();
     const users = data.users || [];
-    const user = users.find((u) => u && String(u.username) === String(username));
+    // Find user by email or username
+    const user = users.find((u) => {
+      if (!u) return false;
+      if (email) {
+        return String(u.email || '').toLowerCase() === String(email).toLowerCase();
+      } else {
+        return String(u.username || '') === String(username);
+      }
+    });
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });
     // Only allow reset when mustReset is true (created with temporary password)
     if (!user.mustReset) return res.status(400).json({ success: false, error: 'Password reset not required' });
@@ -310,25 +334,52 @@ app.post('/api/users', requireAdmin, (req, res) => {
   const data = readData();
   const users = data.users || [];
   const id = String(payload.id || `u_${Date.now()}`);
+  
+  // Validate required fields
+  if (!payload.email || !payload.username) {
+    return res.status(400).json({ success: false, error: 'Email and username are required' });
+  }
+  
+  // Check if email already exists
+  const existingUser = users.find(u => u && String(u.email || '').toLowerCase() === String(payload.email).toLowerCase());
+  if (existingUser) {
+    return res.status(400).json({ success: false, error: 'Email already exists' });
+  }
+  
   // If admin provided a password, use it. Otherwise generate a secure temporary password
   let tempPassword = null;
   if (payload.password) {
     const hashed = bcrypt.hashSync(String(payload.password), 8);
-    const newUser = { id, username: String(payload.username || ''), password: hashed, role: payload.role === 'admin' ? 'admin' : 'user', mustReset: false };
+    const newUser = { 
+      id, 
+      username: String(payload.username || ''), 
+      email: String(payload.email || '').toLowerCase(),
+      password: hashed, 
+      role: payload.role === 'admin' ? 'admin' : 'user', 
+      mustReset: false 
+    };
     users.push(newUser);
     data.users = users;
     writeData(data);
-    return res.json({ success: true, user: { id: newUser.id, username: newUser.username, role: newUser.role } });
+    return res.json({ success: true, user: { id: newUser.id, username: newUser.username, email: newUser.email, role: newUser.role } });
   }
+  
   // generate temporary password
   tempPassword = crypto.randomBytes(6).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 12);
   const hashedTemp = bcrypt.hashSync(String(tempPassword), 8);
-  const newUser = { id, username: String(payload.username || ''), password: hashedTemp, role: payload.role === 'admin' ? 'admin' : 'user', mustReset: true };
+  const newUser = { 
+    id, 
+    username: String(payload.username || ''), 
+    email: String(payload.email || '').toLowerCase(),
+    password: hashedTemp, 
+    role: payload.role === 'admin' ? 'admin' : 'user', 
+    mustReset: true 
+  };
   users.push(newUser);
   data.users = users;
   writeData(data);
   // return the temporary password so admin can copy/share it
-  return res.json({ success: true, user: { id: newUser.id, username: newUser.username, role: newUser.role }, temporaryPassword: tempPassword });
+  return res.json({ success: true, user: { id: newUser.id, username: newUser.username, email: newUser.email, role: newUser.role }, temporaryPassword: tempPassword });
 });
 
 app.put('/api/users/:id', requireAdmin, (req, res) => {
