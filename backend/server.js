@@ -55,11 +55,13 @@ app.get('/api/data', (req, res) => {
 app.post('/api/upload-review', requireAdmin, upload.array('files', 10), (req, res) => {
   try {
     const files = Array.isArray(req.files) ? req.files : []
+    const eventName = req.body.eventName || ''
     const data = readData()
     data.reviews = Array.isArray(data.reviews) ? data.reviews : []
     const saved = files.map(f => ({
       id: `r_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
       originalName: f.originalname,
+      eventName: eventName.trim() || f.originalname, // Use event name or fallback to filename
       mime: f.mimetype,
       size: f.size,
       path: `/uploads/${path.basename(f.path)}`,
@@ -77,6 +79,42 @@ app.post('/api/upload-review', requireAdmin, upload.array('files', 10), (req, re
 app.post('/api/data', (req, res) => {
   writeData(req.body || {});
   res.json({ success: true });
+});
+
+// Delete review endpoint
+app.delete('/api/reviews/:id', requireAdmin, (req, res) => {
+  try {
+    const { id } = req.params
+    const data = readData()
+    
+    if (!Array.isArray(data.reviews)) {
+      return res.status(404).json({ success: false, error: 'Review not found' })
+    }
+    
+    const reviewIndex = data.reviews.findIndex(review => review.id === id)
+    if (reviewIndex === -1) {
+      return res.status(404).json({ success: false, error: 'Review not found' })
+    }
+    
+    // Remove the review from data
+    const deletedReview = data.reviews.splice(reviewIndex, 1)[0]
+    writeData(data)
+    
+    // Optionally delete the file from filesystem
+    try {
+      const filePath = path.join(process.cwd(), 'uploads', path.basename(deletedReview.path))
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath)
+      }
+    } catch (fileErr) {
+      console.warn('Could not delete file:', fileErr.message)
+    }
+    
+    res.json({ success: true, message: 'Review deleted successfully' })
+  } catch (err) {
+    console.error('delete review error', err)
+    res.status(500).json({ success: false, error: 'Delete failed' })
+  }
 });
 // Helper: get/set resource arrays inside data.json
 const VALID_RESOURCES = new Set(['tracks', 'catalog', 'users', 'events']);

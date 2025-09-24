@@ -34,6 +34,7 @@ export function FileUploadModal({ trigger, accept, uploadTo }: FileUploadModalPr
   const [isOpen, setIsOpen] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
+  const [eventName, setEventName] = useState('')
   const { toast } = useToast()
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,13 +89,30 @@ export function FileUploadModal({ trigger, accept, uploadTo }: FileUploadModalPr
       return
     }
 
+    // For feedback uploads, require event name
+    if (uploadTo === '/api/upload-review' && !eventName.trim()) {
+      toast({
+        title: "Event name required",
+        description: "Please enter an event name for the feedback.",
+        variant: "destructive"
+      })
+      return
+    }
+
     try {
       const fd = new FormData()
       selectedFiles.forEach(f => fd.append('files', f))
+      
+      // Add event name for feedback uploads
+      if (uploadTo === '/api/upload-review' && eventName.trim()) {
+        fd.append('eventName', eventName.trim())
+      }
+      
       const target = uploadTo || '/api/upload-review'
       await api.post(target, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       toast({ title: 'Files uploaded successfully', description: `${selectedFiles.length} file(s) have been uploaded.` })
       setSelectedFiles([])
+      setEventName('')
       setIsOpen(false)
     } catch (err) {
       toast({ title: 'Upload failed', description: 'Could not upload files', variant: 'destructive' })
@@ -123,6 +141,26 @@ export function FileUploadModal({ trigger, accept, uploadTo }: FileUploadModalPr
         </DialogHeader>
         
         <div className="space-y-4">
+          {/* Event Name Field for feedback uploads */}
+          {uploadTo === '/api/upload-review' && (
+            <div className="space-y-2">
+              <Label htmlFor="event-name" className="text-sm font-medium">
+                Event Name <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="event-name"
+                type="text"
+                placeholder="Enter event name (e.g., AI Workshop 2024)"
+                value={eventName}
+                onChange={(e) => setEventName(e.target.value)}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                This name will be displayed with the feedback image
+              </p>
+            </div>
+          )}
+
           {/* File Drop Zone */}
           <div
             className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
@@ -188,7 +226,10 @@ export function FileUploadModal({ trigger, accept, uploadTo }: FileUploadModalPr
             <Button variant="outline" onClick={() => setIsOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleUpload} disabled={selectedFiles.length === 0}>
+            <Button 
+              onClick={handleUpload} 
+              disabled={selectedFiles.length === 0 || (uploadTo === '/api/upload-review' && !eventName.trim())}
+            >
               Upload {selectedFiles.length > 0 && `(${selectedFiles.length})`}
             </Button>
           </div>
