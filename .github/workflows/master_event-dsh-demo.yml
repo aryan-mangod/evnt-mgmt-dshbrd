@@ -44,6 +44,16 @@ jobs:
           cp -r node_modules deploy-package/
           [ -f web.config ] && cp web.config deploy-package/ || true
           [ -f startup.txt ] && cp startup.txt deploy-package/ || true
+          
+          # Verify data.json exists (contains user accounts and app data)
+          if [ -f backend/data.json ]; then
+            echo "✅ data.json found and will be preserved in deployment"
+            ls -la backend/data.json
+          else
+            echo "⚠️ WARNING: backend/data.json not found!"
+            echo "The server will create a default admin user on first run"
+            echo "Default login will be: admin / password"
+          fi
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
