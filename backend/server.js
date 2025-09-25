@@ -40,7 +40,15 @@ function readData() {
 
 function writeData(data) {
   try {
-    fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2), 'utf8');
+    // Add lastUpdated timestamp to track when data was modified
+    const dataWithTimestamp = {
+      ...data,
+      _metadata: {
+        ...data._metadata,
+        lastUpdated: new Date().toISOString()
+      }
+    };
+    fs.writeFileSync(DATA_PATH, JSON.stringify(dataWithTimestamp, null, 2), 'utf8');
   } catch (err) {
     console.error('writeData error', err);
   }
@@ -49,6 +57,17 @@ function writeData(data) {
 // Routes
 app.get('/api/data', (req, res) => {
   res.json(readData());
+});
+
+// Get last updated timestamp
+app.get('/api/last-updated', (req, res) => {
+  try {
+    const data = readData();
+    const lastUpdated = data._metadata?.lastUpdated || new Date().toISOString();
+    res.json({ lastUpdated });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get last updated timestamp' });
+  }
 });
 
 // Reviews screenshots upload (images or PDFs). Multiple files accepted.

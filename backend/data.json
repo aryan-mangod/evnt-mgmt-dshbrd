@@ -58,8 +58,9 @@
     {
       "sr": 10,
       "trackName": "Develop Generative AI Solutions With Azure OpenAI Service",
-      "testingStatus": "In-progress",
-      "releaseNotes": "Release Notes"
+      "testingStatus": "Completed",
+      "releaseNotes": "Release Notes",
+      "releaseUrl": ""
     },
     {
       "sr": 11,
@@ -203,6 +204,18 @@
       "userId": "u_1758721534627",
       "role": "admin",
       "expiresAt": 1759326372596
+    },
+    {
+      "token": "3f697dbf488d34792d677f18394f29a9c278dc9d5ce5b3ae",
+      "userId": "admin",
+      "role": "admin",
+      "expiresAt": 1759402508463
+    },
+    {
+      "token": "0a082bf36e6ab8db6372635c38c118d78aa581f2c9226693",
+      "userId": "admin",
+      "role": "admin",
+      "expiresAt": 1759402987521
     }
   ],
   "events": [

@@ -21,6 +21,7 @@ import {
   Eye,
   TrendingUp,
   Trash2,
+  FileText,
 } from "lucide-react"
 import api from '@/lib/api'
 import metricsService from '@/lib/services/metricsService'
@@ -67,16 +68,11 @@ const statusColors = {
 
 export function DashboardContent() {
   const navigate = useNavigate()
-  const [recentEvents, setRecentEvents] = useState<any[]>([])
-  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([])
   const [tracks, setTracks] = useState<any[]>([])
   const [catalogHealth, setCatalogHealth] = useState<{ title: string; percent: number }[]>([])
   const [localizedProgress, setLocalizedProgress] = useState<{ title: string; languages: { name: string; percent: number; status: string }[] }[]>([])
   // removed search/filter controls
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
-  const [selectedEvent, setSelectedEvent] = useState<Record<string, unknown> | null>(null)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [editEvent, setEditEvent] = useState<any>(null)
   const { toast } = useToast()
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [trendingApi, setTrendingApi] = useState<CarouselApi | null>(null)
@@ -85,10 +81,15 @@ export function DashboardContent() {
   const [newTrendingTitle, setNewTrendingTitle] = useState("")
   const [newTrendingDesc, setNewTrendingDesc] = useState("")
   const [liveMetrics, setLiveMetrics] = useState({
-    completedEvents: 0,
-    upcomingEvents: 0,
     activeParticipants: 0,
     avgSatisfaction: 0,
+    tracksHealthPercentage: 0,
+    lastUpdated: Date.now(),
+  })
+  const [roadmapStats, setRoadmapStats] = useState({
+    development: 0,
+    releaseReady: 0,
+    backlog: 0,
   })
 
   
@@ -96,16 +97,27 @@ export function DashboardContent() {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const ev = await api.get('/api/events').then(r => Array.isArray(r.data) ? r.data : [])
-        const recent = ev.map((e: any, idx: number) => ({ id: e.id || e.sr || idx+1, name: e.name || e.title || String(e.trackName || ''), type: e.type || 'Technology', status: e.status || 'completed', participants: Number(e.participants || 0), time: e.time || 'recent', rating: Number(e.rating || 0), revenue: Number(e.revenue || 0) }))
-        setRecentEvents(recent)
-
-        const upcoming = ev.filter((e: any) => !!(e.upcoming || e.isUpcoming || e.scheduled || (e.status && String(e.status).toLowerCase() === 'confirmed')))
-          .map((e: any, idx: number) => ({ id: e.id || e.sr || idx+1, name: e.name || e.title || String(e.trackName || ''), type: e.type || 'Education', date: e.date || e.scheduled || '', expectedParticipants: Number(e.expectedParticipants || 0), status: e.status || 'confirmed', ticketsSold: Number(e.ticketsSold || 0) }))
-        setUpcomingEvents(upcoming)
-
         const tr = await api.get('/api/tracks').then(r => Array.isArray(r.data) ? r.data : [])
         setTracks(tr)
+        
+        // Calculate Top 25 Tracks Health percentage
+        const top25Tracks = tr.slice(0, 25) // Get first 25 tracks
+        const getStatusWeight = (status: string) => {
+          const s = String(status || '').toLowerCase()
+          if (s === 'completed') return 1.0      // 100% weight
+          if (s === 'in-progress') return 0.5    // 50% weight
+          if (s === 'pending') return 0.2        // 20% weight
+          return 0                               // 0% weight for unknown/empty
+        }
+        
+        const totalHealthScore = top25Tracks.reduce((acc: number, track: any) => {
+          return acc + getStatusWeight(track.testingStatus)
+        }, 0)
+        
+        const tracksHealthPercentage = top25Tracks.length > 0 
+          ? Math.round((totalHealthScore / top25Tracks.length) * 100) 
+          : 0
+        
         // derive catalog health from catalog resource
         const catalog = await api.get('/api/catalog').then(r => Array.isArray(r.data) ? r.data : [])
         const localized = catalog.filter((i: any) => i && (i.type === 'localizedTrack' || i.trackTitle || i.trackName))
@@ -143,33 +155,58 @@ export function DashboardContent() {
           localizedEntries.push({ title, languages: langs })
         })
         entries.sort((a, b) => b.percent - a.percent)
-        setCatalogHealth(entries.slice(0, 3))
+        setCatalogHealth(entries.slice(0, 5))
         setLocalizedProgress(localizedEntries.slice(0, 5))
 
-        const completedCount = ev.filter((e: any) => (String(e.status || '')).toLowerCase() === 'completed' || e.completed === true).length
-        const upcomingCount = upcoming.length
         const activeParticipants = Array.isArray(tr) ? tr.reduce((acc: number, t: any) => acc + Number(t.participants || 0), 0) : 0
-        const avgSatisfaction = recent.length > 0 ? (recent.reduce((a, b) => a + Number(b.rating || 0), 0) / recent.length) : 0
+        const avgSatisfaction = 4.2 // Default satisfaction score
+        // Fetch server's last updated timestamp
+        let serverLastUpdated = Date.now()
+        try {
+          const lastUpdatedResponse = await api.get('/api/last-updated')
+          if (lastUpdatedResponse.data?.lastUpdated) {
+            serverLastUpdated = new Date(lastUpdatedResponse.data.lastUpdated).getTime()
+          }
+        } catch {
+          // Use current time as fallback
+        }
+
         // Start from derived counts
         let next = {
-          completedEvents: completedCount,
-          upcomingEvents: upcomingCount,
           activeParticipants,
           avgSatisfaction,
+          tracksHealthPercentage,
+          lastUpdated: serverLastUpdated,
         }
         // Overlay any saved metrics
         try {
           const saved = await metricsService.get()
           if (saved) {
             next = {
-              completedEvents: Number(saved['dashboard.completedEvents'] ?? next.completedEvents) || 0,
-              upcomingEvents: Number(saved['dashboard.upcomingEvents'] ?? next.upcomingEvents) || 0,
               activeParticipants: Number(saved['dashboard.activeParticipants'] ?? next.activeParticipants) || 0,
               avgSatisfaction: Number(saved['dashboard.avgSatisfaction'] ?? next.avgSatisfaction) || 0,
+              tracksHealthPercentage: Number(saved['dashboard.tracksHealthPercentage'] ?? next.tracksHealthPercentage) || next.tracksHealthPercentage,
+              lastUpdated: serverLastUpdated,
             }
           }
         } catch {}
         setLiveMetrics(next)
+        
+        // Fetch roadmap data for the roadmap card
+        try {
+          const roadmapData = await api.get('/api/catalog').then(r => Array.isArray(r.data) ? r.data : [])
+          const roadmapItems = roadmapData.filter((item: any) => item.type === 'roadmapItem')
+          
+          const development = roadmapItems.filter((item: any) => String(item.phase || '').toLowerCase() === 'development').length
+          const releaseReady = roadmapItems.filter((item: any) => String(item.phase || '').toLowerCase() === 'release-ready').length
+          const backlog = roadmapItems.filter((item: any) => String(item.phase || '').toLowerCase() === 'backlog').length
+          
+          setRoadmapStats({ development, releaseReady, backlog })
+        } catch {
+          // Default values if fetch fails
+          setRoadmapStats({ development: 3, releaseReady: 1, backlog: 3 })
+        }
+        
         // Initialize trending topics (localStorage-backed)
         try {
           const saved = typeof window !== 'undefined' ? localStorage.getItem('dashboard.trendingTopics') : null
@@ -221,8 +258,7 @@ export function DashboardContent() {
     return () => clearInterval(interval)
   }, [trendingApi])
 
-  const filteredRecentEvents = recentEvents
-  const filteredUpcomingEvents = upcomingEvents
+
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections((prev) => ({
@@ -253,104 +289,154 @@ export function DashboardContent() {
 
   return (
     <>
-    <div className="space-y-8 animate-fade-in">
-      {/* Enhanced Header with Gradient */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 p-8 text-white">
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="relative z-10">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-            <div className="flex flex-col space-y-3">
-              <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
+    {/* Premium Smooth Animations */}
+    <style jsx>{`
+      @keyframes float {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-10px) rotate(2deg); }
+      }
+      @keyframes float-delayed {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(10px) rotate(-2deg); }
+      }
+      @keyframes pulse-subtle {
+        0%, 100% { opacity: 0.8; }
+        50% { opacity: 1; }
+      }
+      @keyframes fade-in-up {
+        0% { opacity: 0; transform: translateY(20px); }
+        100% { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+      }
+      .animate-float { animation: float 8s ease-in-out infinite; }
+      .animate-float-delayed { animation: float-delayed 10s ease-in-out infinite; }
+      .animate-pulse-subtle { animation: pulse-subtle 6s ease-in-out infinite; }
+      .animate-fade-in-up { animation: fade-in-up 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; opacity: 0; }
+      .animate-shimmer { animation: shimmer 3s linear infinite; }
+      
+      /* Custom smooth transitions */
+      * { transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
+      .group:hover .scale-hover { transform: scale(1.05); }
+      .smooth-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    `}</style>
+    <div className="space-y-10 animate-fade-in relative min-h-screen">
+      {/* Professional Corporate Background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        {/* Subtle dot pattern */}
+        <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.04]" style={{
+          backgroundImage: `radial-gradient(circle at 1px 1px, rgb(148 163 184) 1px, transparent 0)`,
+          backgroundSize: '40px 40px'
+        }}></div>
+        {/* Professional gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50/60 via-blue-50/30 to-gray-50/40 dark:from-slate-950/60 dark:via-blue-950/30 dark:to-gray-950/40"></div>
+        {/* Subtle professional elements */}
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-100/8 dark:bg-blue-800/5 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-48 h-48 bg-slate-100/6 dark:bg-slate-800/4 rounded-full blur-2xl animate-float-delayed"></div>
+      </div>
+      {/* Professional Corporate Title Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 shadow-xl border border-slate-700">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-950/50 via-slate-950/30 to-indigo-950/50"></div>
+        
+        {/* Subtle professional background elements */}
+        <div className="absolute -top-6 -right-6 w-32 h-32 bg-blue-800/10 rounded-full blur-2xl animate-float"></div>
+        <div className="absolute -bottom-4 -left-4 w-24 h-24 bg-slate-800/10 rounded-full blur-xl animate-float-delayed"></div>
+        
+        <div className="relative z-10 p-10 text-white">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-6 lg:space-y-0">
+            <div className="flex-1">
+              <h1 className="text-4xl lg:text-5xl font-semibold text-white leading-tight tracking-tight">
                 MS Innovation Catalogue Management Dashboard
               </h1>
-              <p className="text-blue-100 text-xl font-medium">
-                Monitor your events, tracks, and participant engagement in real-time.
-              </p>
-              <div className="flex items-center gap-2 text-blue-200">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-sm">Live Dashboard</span>
-              </div>
             </div>
-            <div className="flex items-center gap-4">
-              {/* last-updated removed per request */}
+            
+            <div className="flex flex-col items-end space-y-2 lg:min-w-0 lg:flex-shrink-0">
+              <div className="flex items-center gap-2 text-slate-300 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/20">
+                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium">Last Updated</span>
+              </div>
+              <div className="text-slate-200 text-base font-mono bg-black/20 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-white/10">
+                {new Date(liveMetrics.lastUpdated || Date.now()).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                })} • {new Date(liveMetrics.lastUpdated || Date.now()).toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </div>
             </div>
           </div>
         </div>
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
       </div>
 
-      {/* Enhanced Metric Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <div className="group transform hover:scale-105 hover:-translate-y-1 transition-all duration-300">
-          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 p-6 text-white shadow-lg hover:shadow-xl transition-shadow">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-10 translate-x-10"></div>
+      {/* Professional Corporate Metric Cards */}
+      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 relative z-10">
+        
+        <div className="group transition-all duration-500 ease-out hover:scale-[1.02] hover:-translate-y-1 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+          <div onClick={() => navigate('/top25-tracks')} className="relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-blue-50/40 dark:from-slate-800 dark:to-slate-700/50 border border-blue-200/50 dark:border-blue-800/30 p-8 shadow-lg hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-500 cursor-pointer">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-slate-500/5 dark:from-blue-400/10 dark:to-slate-400/10"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/60 to-slate-50/60 dark:from-blue-950/30 dark:to-slate-950/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <div className="absolute top-0 right-0 w-20 h-20 bg-blue-200/30 dark:bg-blue-700/20 rounded-full -translate-y-10 translate-x-10"></div>
             <div className="relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <CheckCircle className="h-8 w-8 text-green-100" />
+              <div className="flex items-center justify-between mb-6">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200/70 dark:from-blue-900/40 dark:to-blue-800/40 text-blue-700 dark:text-blue-300 group-hover:scale-105 transition-transform duration-300 shadow-sm">
+                  <FileText className="h-6 w-6" />
+                </div>
                 <div className="text-right">
-                  <p className="text-green-100 text-sm font-medium">Completed</p>
-                  <p className="text-2xl font-bold">
-                    <InlineMetric metricKey="dashboard.completedEvents" value={liveMetrics.completedEvents} />
+                  <p className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-1">Top 25 Tracks</p>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                    <InlineMetric metricKey="dashboard.tracksHealthPercentage" value={liveMetrics.tracksHealthPercentage} />%
                   </p>
                 </div>
               </div>
-              <p className="text-green-100 text-sm font-medium">Events</p>
+              <p className="text-slate-700 dark:text-slate-300 font-medium">Health Status</p>
             </div>
           </div>
         </div>
         
-        <div className="group transform hover:scale-105 hover:-translate-y-1 transition-all duration-300">
-          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 p-6 text-white shadow-lg hover:shadow-xl transition-shadow">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-10 translate-x-10"></div>
+        <div className="group transition-all duration-500 ease-out hover:scale-[1.02] hover:-translate-y-1 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-indigo-50/40 dark:from-slate-800 dark:to-slate-700/50 border border-indigo-200/50 dark:border-indigo-800/30 p-8 shadow-lg hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-500">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-slate-500/5 dark:from-indigo-400/10 dark:to-slate-400/10"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/60 to-slate-50/60 dark:from-indigo-950/30 dark:to-slate-950/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-200/30 dark:bg-indigo-700/20 rounded-full -translate-y-10 translate-x-10"></div>
             <div className="relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <Calendar className="h-8 w-8 text-blue-100" />
-                <div className="text-right">
-                  <p className="text-blue-100 text-sm font-medium">Upcoming</p>
-                  <p className="text-2xl font-bold">
-                    <InlineMetric metricKey="dashboard.upcomingEvents" value={liveMetrics.upcomingEvents} />
-                  </p>
+              <div className="flex items-center justify-between mb-6">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-100 to-indigo-200/70 dark:from-indigo-900/40 dark:to-indigo-800/40 text-indigo-700 dark:text-indigo-300 group-hover:scale-105 transition-transform duration-300 shadow-sm">
+                  <Users className="h-6 w-6" />
                 </div>
-              </div>
-              <p className="text-blue-100 text-sm font-medium">Events</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="group transform hover:scale-105 hover:-translate-y-1 transition-all duration-300">
-          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 p-6 text-white shadow-lg hover:shadow-xl transition-shadow">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-10 translate-x-10"></div>
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <Users className="h-8 w-8 text-purple-100" />
                 <div className="text-right">
-                  <p className="text-purple-100 text-sm font-medium">Active</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-1">Active</p>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-white">
                     <InlineMetric metricKey="dashboard.activeParticipants" value={liveMetrics.activeParticipants} />
                   </p>
                 </div>
               </div>
-              <p className="text-purple-100 text-sm font-medium">Participants</p>
+              <p className="text-slate-700 dark:text-slate-300 font-medium">Participants</p>
             </div>
           </div>
         </div>
         
-        <div className="group transform hover:scale-105 hover:-translate-y-1 transition-all duration-300">
-          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-orange-500 to-red-500 p-6 text-white shadow-lg hover:shadow-xl transition-shadow">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-10 translate-x-10"></div>
+        <div className="group transition-all duration-500 ease-out hover:scale-[1.02] hover:-translate-y-1 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-amber-50/40 dark:from-slate-800 dark:to-slate-700/50 border border-amber-200/50 dark:border-amber-800/30 p-8 shadow-lg hover:shadow-xl hover:shadow-amber-500/10 transition-all duration-500">
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-slate-500/5 dark:from-amber-400/10 dark:to-slate-400/10"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-50/60 to-slate-50/60 dark:from-amber-950/30 dark:to-slate-950/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <div className="absolute top-0 right-0 w-20 h-20 bg-amber-200/30 dark:bg-amber-700/20 rounded-full -translate-y-10 translate-x-10"></div>
             <div className="relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <Star className="h-8 w-8 text-orange-100" />
+              <div className="flex items-center justify-between mb-6">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-amber-100 to-amber-200/70 dark:from-amber-900/40 dark:to-amber-800/40 text-amber-700 dark:text-amber-300 group-hover:scale-105 transition-transform duration-300 shadow-sm">
+                  <Star className="h-6 w-6" />
+                </div>
                 <div className="text-right">
-                  <p className="text-orange-100 text-sm font-medium">Satisfaction</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-1">Satisfaction</p>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-white">
                     <InlineMetric metricKey="dashboard.avgSatisfaction" value={Number(liveMetrics.avgSatisfaction.toFixed(1))} />
                   </p>
                 </div>
               </div>
-              <p className="text-orange-100 text-sm font-medium">Average Rating</p>
+              <p className="text-slate-700 dark:text-slate-300 font-medium">Average Rating</p>
             </div>
           </div>
         </div>
@@ -358,113 +444,21 @@ export function DashboardContent() {
 
       {/* Global edit metrics button removed; inline pencil per metric is used */}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Side - Events (stacked for natural height) */}
-        <div className="space-y-6 lg:col-span-2">
-          {/* Completed Events */}
-          <Card onClick={() => navigate('/completed-events')} className="group relative overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5"></div>
-            <CardHeader className="relative z-10 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-b border-green-200/20 dark:border-green-800/20">
-              <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 text-white">
-                  <CheckCircle className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold">Completed Events</h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 font-normal">Recently finished events and their performance</p>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {filteredRecentEvents
-                // remove any events that have an empty/whitespace-only name for the overview card
-                .filter((ev) => String(ev.name || '').trim() !== '')
-                .slice(0, 7)
-                .map((event) => (
-                  <div key={event.id} className="relative">
-                    <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200/50 dark:border-green-800/30 hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-900/30 dark:hover:to-emerald-900/30 cursor-pointer transition-all duration-200 group hover:shadow-md">
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-none group-hover:text-green-700 dark:group-hover:text-green-300 transition-colors">
-                          {event.name}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0 shadow-sm">
-                          Completed
-                        </Badge>
-                      </div>
-                    </div>
-                    {((typeof window !== 'undefined' ? localStorage.getItem('dashboard_role') : null) === 'admin') && (
-                      <div className="absolute right-0 top-0">
-                        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation?.(); setEditEvent(event); setIsEditDialogOpen(true); }}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-            </CardContent>
-          </Card>
-
-          {/* Upcoming Events */}
-          <Card onClick={() => navigate('/upcoming-events')} className="group relative overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5"></div>
-            <CardHeader className="relative z-10 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-b border-blue-200/20 dark:border-blue-800/20">
-              <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 text-white">
-                  <Calendar className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold">Upcoming Events</h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 font-normal">Scheduled events and planning status</p>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {filteredUpcomingEvents
-                .slice(0, 6)
-                .map((event) => (
-                  <div key={event.id} className="relative p-4 rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border border-blue-200/50 dark:border-blue-800/30 hover:from-blue-100 hover:to-cyan-100 dark:hover:from-blue-900/30 dark:hover:to-cyan-900/30 cursor-pointer transition-all duration-200 group hover:shadow-md">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-none group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
-                          {event.name}
-                        </p>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">
-                          {event.date} • {event.expectedParticipants} expected
-                        </p>
-                      </div>
-                      <Badge className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white border-0 shadow-sm">
-                        {event.status}
-                      </Badge>
-                    </div>
-                    {((typeof window !== 'undefined' ? localStorage.getItem('dashboard_role') : null) === 'admin') && (
-                      <div className="absolute right-0 top-0">
-                        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation?.(); setEditEvent(event); setIsEditDialogOpen(true); }}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Side - Trending, Catalog Health, Localized Tracks (stacked) */}
-        <div className="space-y-6 lg:col-span-1">
-          {/* Top 5 Trending Topics */}
-          <Card className="group relative overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-red-500/5 pointer-events-none"></div>
-            <CardHeader className="relative z-10 bg-gradient-to-r from-orange-500/10 to-red-500/10 border-b border-orange-200/20 dark:border-orange-800/20">
-              <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center justify-between">
+      {/* Professional Corporate 2x2 Grid Layout */}
+      <div className="grid gap-8 lg:grid-cols-2 xl:grid-cols-2 relative z-10">
+          {/* Trending Topics */}
+          <Card className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-emerald-50/30 dark:from-slate-800 dark:to-slate-700/50 border border-emerald-200/40 dark:border-emerald-800/25 shadow-lg hover:shadow-xl hover:shadow-emerald-500/8 transition-all duration-500 ease-out hover:-translate-y-1 hover:scale-[1.01] animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/3 via-transparent to-slate-500/3 dark:from-emerald-400/5 dark:to-slate-400/5"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 to-slate-50/50 dark:from-emerald-950/20 dark:to-slate-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+            <CardHeader className="relative z-10 border-b border-emerald-200/40 dark:border-emerald-800/25">
+              <CardTitle className="text-lg font-semibold text-slate-900 dark:text-white flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 text-white">
-                    <TrendingUp className="h-6 w-6" />
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-200/70 dark:from-emerald-900/40 dark:to-emerald-800/40 text-emerald-700 dark:text-emerald-300 group-hover:scale-105 transition-transform duration-300 shadow-sm">
+                    <TrendingUp className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold">Trending Topics</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 font-normal">Hot tech topics for innovative labs</p>
+                    <h3 className="text-lg font-semibold">Trending Topics</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 font-normal">Hot tech topics for labs</p>
                   </div>
                 </div>
                 {((typeof window !== 'undefined' ? localStorage.getItem('dashboard_role') : null) === 'admin') && (
@@ -474,12 +468,12 @@ export function DashboardContent() {
                 )}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 relative z-10">
-              {trendingTopics.slice(0, 7).map((item, index) => (
-                <div key={`${item.topic}-${index}`} className="flex items-center justify-between p-2.5 rounded-lg bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 border border-orange-200/50 dark:border-orange-800/30 hover:from-orange-100 hover:to-red-100 dark:hover:from-orange-900/30 dark:hover:to-red-900/30 transition-all duration-200 group hover:shadow-sm">
+            <CardContent className="space-y-3 relative z-10 py-6">
+              {trendingTopics.slice(0, 4).map((item, index) => (
+                <div key={`${item.topic}-${index}`} className="flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all duration-300 group/item hover:shadow-md">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 group-hover:text-orange-700 dark:group-hover:text-orange-300 transition-colors truncate">{item.topic}</span>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400 transition-colors truncate">{item.topic}</span>
                           </div>
                     <p className="text-xs text-slate-600 dark:text-slate-400 truncate">{item.description}</p>
                         </div>
@@ -496,33 +490,33 @@ export function DashboardContent() {
           </Card>
 
           {/* Catalog Health */}
-          <Card onClick={() => navigate('/catalog-health')} className="group relative overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
-            <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-pink-500/5"></div>
-            <CardHeader className="relative z-10 bg-gradient-to-r from-red-500/10 to-pink-500/10 border-b border-red-200/20 dark:border-red-800/20">
-              <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-red-500 to-pink-600 text-white">
-                  <Heart className="h-6 w-6" />
+          <Card onClick={() => navigate('/catalog-health')} className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-rose-50/30 dark:from-slate-800 dark:to-slate-700/50 border border-rose-200/40 dark:border-rose-800/25 shadow-lg hover:shadow-xl hover:shadow-rose-500/8 transition-all duration-500 ease-out hover:-translate-y-1 hover:scale-[1.01] cursor-pointer animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+            <div className="absolute inset-0 bg-gradient-to-br from-rose-500/3 via-transparent to-slate-500/3 dark:from-rose-400/5 dark:to-slate-400/5"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-rose-50/50 to-slate-50/50 dark:from-rose-950/20 dark:to-slate-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+            <CardHeader className="relative z-10 border-b border-rose-200/40 dark:border-rose-800/25">
+              <CardTitle className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-rose-100 to-rose-200/70 dark:from-rose-900/40 dark:to-rose-800/40 text-rose-700 dark:text-rose-300 group-hover:scale-105 transition-transform duration-300 shadow-sm">
+                  <Heart className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold">Catalog Health</h3>
+                  <h3 className="text-lg font-semibold">Catalog Health</h3>
                   <p className="text-sm text-slate-600 dark:text-slate-400 font-normal">Overall health metrics of your event catalog</p>
                 </div>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 py-6">
               {catalogHealth.map((metric, index) => {
-                const color = metric.percent >= 100 ? 'bg-green-500' : metric.percent >= 50 ? 'bg-yellow-500' : metric.percent > 0 ? 'bg-orange-500' : 'bg-red-500'
+                const color = metric.percent >= 100 ? 'bg-emerald-500 dark:bg-emerald-400' : metric.percent >= 50 ? 'bg-yellow-500 dark:bg-yellow-400' : metric.percent > 0 ? 'bg-orange-500 dark:bg-orange-400' : 'bg-red-500 dark:bg-red-400'
                 return (
-                  <div key={index} className="space-y-2 group cursor-pointer" onClick={() => navigate('/catalog-health')}>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground group-hover:text-foreground transition-colors truncate">
+                  <div key={index} className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60 group/metric cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all duration-300" onClick={() => navigate('/catalog-health')}>
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-sm font-medium text-slate-900 dark:text-white transition-colors truncate">
                         {metric.title}
                       </span>
-                      <span className="font-medium group-hover:text-primary transition-colors">{metric.percent}%</span>
+                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{metric.percent}%</span>
                     </div>
-                    <div className="relative">
-                      <Progress value={metric.percent} className="h-1.5" />
-                      <div className={`absolute top-0 left-0 h-1.5 rounded-full ${color}`} style={{ width: `${metric.percent}%` }} />
+                    <div className="relative bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${metric.percent}%` }} />
                     </div>
                   </div>
                 )
@@ -530,33 +524,33 @@ export function DashboardContent() {
             </CardContent>
           </Card>
 
-          {/* Localized Tracks (compact under Catalog Health) */}
-          <Card onClick={() => navigate('/localized-tracks')} className="group relative overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 shadow-xl cursor-pointer">
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-teal-500/5"></div>
-            <CardHeader className="relative z-10 bg-gradient-to-r from-cyan-500/10 to-teal-500/10 border-b border-cyan-200/20 dark:border-cyan-800/20 py-4">
-              <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-600 text-white">
+          {/* Localized Tracks */}
+          <Card onClick={() => navigate('/localized-tracks')} className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-cyan-50/30 dark:from-slate-800 dark:to-slate-700/50 border border-cyan-200/40 dark:border-cyan-800/25 shadow-lg hover:shadow-xl hover:shadow-cyan-500/8 transition-all duration-500 ease-out hover:-translate-y-1 hover:scale-[1.01] cursor-pointer animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/3 via-transparent to-slate-500/3 dark:from-cyan-400/5 dark:to-slate-400/5"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-50/50 to-slate-50/50 dark:from-cyan-950/20 dark:to-slate-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+            <CardHeader className="relative z-10 border-b border-cyan-200/40 dark:border-cyan-800/25 pb-4">
+              <CardTitle className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-cyan-100 to-cyan-200/70 dark:from-cyan-900/40 dark:to-cyan-800/40 text-cyan-700 dark:text-cyan-300 group-hover:scale-105 transition-transform duration-300 shadow-sm">
                   <Globe className="h-5 w-5" />
                 </div>
                 <span>Localized Tracks</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 py-4">
+            <CardContent className="space-y-3 py-6">
               {localizedProgress.slice(0, 2).map((t, idx) => (
-                <div key={idx} className="p-3 rounded-lg bg-gradient-to-r from-cyan-50 to-teal-50 dark:from-cyan-900/20 dark:to-teal-900/20 border border-cyan-200/50 dark:border-cyan-800/30">
-                  <div className="text-sm font-semibold mb-2 text-slate-800 dark:text-slate-100">{t.title}</div>
-                  <div className="space-y-2">
+                <div key={idx} className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all duration-300 group/track">
+                  <div className="text-sm font-medium mb-3 text-slate-900 dark:text-white">{t.title}</div>
+                  <div className="space-y-3">
                     {t.languages.map((l, i) => {
-                      const color = l.percent >= 100 ? 'from-green-500 to-emerald-500' : l.percent >= 50 ? 'from-yellow-500 to-orange-500' : 'from-red-500 to-pink-500'
+                      const color = l.percent >= 100 ? 'bg-emerald-500 dark:bg-emerald-400' : l.percent >= 50 ? 'bg-yellow-500 dark:bg-yellow-400' : 'bg-red-500 dark:bg-red-400'
                       return (
-                        <div key={i} className="space-y-1">
+                        <div key={i} className="space-y-2">
                           <div className="flex justify-between text-xs">
                             <span className="text-slate-600 dark:text-slate-400 font-medium">{l.name}</span>
-                            <span className="font-bold text-slate-800 dark:text-slate-100">{l.percent}%</span>
+                            <span className="font-semibold text-slate-900 dark:text-white">{l.percent}%</span>
                           </div>
-                          <div className="relative">
-                            <Progress value={l.percent} className="h-1.5 bg-slate-200 dark:bg-slate-700" />
-                            <div className={`absolute top-0 left-0 h-1.5 rounded-full bg-gradient-to-r ${color}`} style={{ width: `${l.percent}%` }} />
+                          <div className="relative bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${l.percent}%` }} />
                           </div>
                         </div>
                       )
@@ -567,7 +561,54 @@ export function DashboardContent() {
             </CardContent>
           </Card>
 
-        </div>
+        {/* Lab Development Roadmap */}
+        <Card onClick={() => navigate('/roadmap')} className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-violet-50/30 dark:from-slate-800 dark:to-slate-700/50 border border-violet-200/40 dark:border-violet-800/25 shadow-lg hover:shadow-xl hover:shadow-violet-500/8 transition-all duration-500 ease-out hover:-translate-y-1 hover:scale-[1.01] cursor-pointer animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/3 via-transparent to-slate-500/3 dark:from-violet-400/5 dark:to-slate-400/5"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-50/50 to-slate-50/50 dark:from-violet-950/20 dark:to-slate-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+          <CardHeader className="relative z-10 border-b border-violet-200/40 dark:border-violet-800/25 pb-4">
+            <CardTitle className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-violet-100 to-violet-200/70 dark:from-violet-900/40 dark:to-violet-800/40 text-violet-700 dark:text-violet-300 group-hover:scale-105 transition-transform duration-300 shadow-sm">
+                <MapPin className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Lab Development Roadmap</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 font-normal">Track progress of lab development phases</p>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 relative z-10 py-6">
+            <div className="grid gap-3">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all duration-300 group/phase">
+                <div>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">Onboarded</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">Labs fully integrated</p>
+                </div>
+                <div className="px-3 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-lg font-semibold">
+                  {roadmapStats.releaseReady}
+                </div>
+              </div>
+              <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all duration-300 group/phase">
+                <div>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">In Progress</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">Currently developing</p>
+                </div>
+                <div className="px-3 py-1 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-lg font-semibold">
+                  {roadmapStats.development}
+                </div>
+              </div>
+              <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all duration-300 group/phase">
+                <div>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">Pending</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">Awaiting development</p>
+                </div>
+                <div className="px-3 py-1 rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-lg font-semibold">
+                  {roadmapStats.backlog}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
       </div>
 
       {/* Bottom section removed per layout update */}
@@ -604,52 +645,7 @@ export function DashboardContent() {
         </div>
       </EntityEditDialog>
     )}
-    {/* Shared edit dialog for events */}
-    <EntityEditDialog
-      open={isEditDialogOpen}
-      onOpenChange={(v) => { if (!v) setEditEvent(null); setIsEditDialogOpen(v) }}
-      title={editEvent ? `Edit Event: ${String(editEvent.name || editEvent.title || '')}` : 'Edit Event'}
-      saving={false}
-      onSave={async () => {
-        if (!editEvent) throw new Error('No event to save')
-        // basic validation
-        const title = String(editEvent.name || editEvent.title || '')
-        if (!title || title.trim().length < 3) throw new Error('Title is required (min 3 chars)')
-        const payload: any = {}
-        // map known fields
-        if (editEvent.name) payload.name = editEvent.name
-        if (editEvent.title) payload.title = editEvent.title
-        if (editEvent.date) payload.date = editEvent.date
-        if (editEvent.expectedParticipants) payload.expectedParticipants = editEvent.expectedParticipants
-        // persist
-        if (editEvent.id && Number(editEvent.id) > 0) {
-          await api.put(`/api/events/${String(editEvent.id)}`, payload)
-          // update local state
-          setRecentEvents(prev => prev.map(r => r.id === editEvent.id ? { ...r, ...editEvent } : r))
-          setUpcomingEvents(prev => prev.map(r => r.id === editEvent.id ? { ...r, ...editEvent } : r))
-        } else {
-          const res = await api.post('/api/events', payload)
-          const newId = Number(res.data.item && (res.data.item.sr || res.data.item.id) || Date.now())
-          setUpcomingEvents(prev => [...prev, { ...editEvent, id: newId }])
-        }
-        toast({ title: 'Saved', description: 'Event saved' })
-      }}
-    >
-      <div className="grid gap-4 py-2">
-        <div className="grid grid-cols-4 items-center gap-4">
-          <label className="text-right">Title</label>
-          <Input className="col-span-3" value={String(editEvent?.name || editEvent?.title || '')} onChange={(e) => setEditEvent((prev: any) => ({ ...prev, name: e.target.value, title: e.target.value }))} />
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-          <label className="text-right">Date</label>
-          <Input className="col-span-3" value={String(editEvent?.date || '')} onChange={(e) => setEditEvent((prev: any) => ({ ...prev, date: e.target.value }))} />
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-          <label className="text-right">Expected Participants</label>
-          <Input type="number" className="col-span-3" value={String(editEvent?.expectedParticipants || '')} onChange={(e) => setEditEvent((prev: any) => ({ ...prev, expectedParticipants: Number(e.target.value) }))} />
-        </div>
-      </div>
-    </EntityEditDialog>
+
     </>
   )
 }

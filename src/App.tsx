@@ -7,8 +7,6 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate } from "rea
 import api from "@/lib/api";
 import { ThemeProvider } from "@/hooks/use-theme";
 import Index from "./pages/Index";
-import CompletedEvents from "./pages/CompletedEvents";
-import UpcomingEvents from "./pages/UpcomingEvents";
 import UsersPage from "./pages/Users";
 import CatalogHealth from "./pages/CatalogHealth";
 import Top25Tracks from "./pages/Top25Tracks";
@@ -99,8 +97,6 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route element={<RequireAuth />}>
                 <Route path="/" element={<Index />} />
-                <Route path="/completed-events" element={<CompletedEvents />} />
-                <Route path="/upcoming-events" element={<UpcomingEvents />} />
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/catalog-health" element={<CatalogHealth />} />
                 <Route path="/top25-tracks" element={<Top25Tracks />} />

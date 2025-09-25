@@ -29,8 +29,6 @@ import {
 
 const reportItems = [
   { title: "Overview", url: "/", icon: BarChart3 },
-  { title: "Completed Events", url: "/completed-events", icon: TrendingUp },
-  { title: "Upcoming Events", url: "/upcoming-events", icon: Calendar },
   { title: "Catalog Health", url: "/catalog-health", icon: Calendar },
   { title: "Top 25 Tracks", url: "/top25-tracks", icon: FileText },
   { title: "Roadmap", url: "/roadmap", icon: MapPin },
