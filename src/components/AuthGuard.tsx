@@ -3,7 +3,7 @@ import { ReactNode } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Shield, User } from "lucide-react";
-import { loginRequest } from "../lib/msalConfig";
+import { loginRequest, msalConfig } from "../lib/msalConfig";
 
 interface AuthGuardProps {
   children: ReactNode;
@@ -14,8 +14,12 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
   const { instance, accounts, inProgress } = useMsal();
 
   const handleLogin = () => {
-    // Direct navigation to B2C login URL to skip any intermediate redirects
-    const directLoginUrl = `https://cloudlabsai.b2clogin.com/cloudlabsai.onmicrosoft.com/B2C_1A_CUSTOM_SIGNUP_SIGNIN/oauth2/v2.0/authorize?client_id=e92e446f-5d92-4100-8c37-7e31fbd69c04&scope=openid%20profile%20email&redirect_uri=${encodeURIComponent(window.location.origin)}&response_type=code&state=${btoa('azureb2c')}`;
+    // Use the exact redirect URI from MSAL config to avoid encoding issues
+    const redirectUri = msalConfig.auth.redirectUri || window.location.origin;
+    const directLoginUrl = `https://cloudlabsai.b2clogin.com/cloudlabsai.onmicrosoft.com/B2C_1A_CUSTOM_SIGNUP_SIGNIN/oauth2/v2.0/authorize?client_id=${msalConfig.auth.clientId}&scope=openid%20profile%20email&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&state=${btoa('azureb2c')}`;
+    
+    console.log('Redirect URI being used:', redirectUri);
+    console.log('Full login URL:', directLoginUrl);
     
     window.location.href = directLoginUrl;
   };

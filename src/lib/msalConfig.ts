@@ -10,8 +10,8 @@ export const msalConfig: Configuration = {
     clientId: "e92e446f-5d92-4100-8c37-7e31fbd69c04", // This is the ONLY mandatory field that you need to supply.
     authority: "https://cloudlabsai.b2clogin.com/cloudlabsai.onmicrosoft.com/B2C_1A_CUSTOM_SIGNUP_SIGNIN", // Choose SUSI as your default authority.
     knownAuthorities: ["cloudlabsai.b2clogin.com"], // Mark your B2C tenant's domain as trusted.
-    redirectUri: "https://event-dsh-demo-azhwfrfzeeegbec4.eastus-01.azurewebsites.net/", // Must match exactly what's configured in Azure B2C
-    postLogoutRedirectUri: "https://event-dsh-demo-azhwfrfzeeegbec4.eastus-01.azurewebsites.net/", // Redirect back to your app after logout
+    redirectUri: "https://event-dsh-demo-azhwfrfzeeegbec4.eastus-01.azurewebsites.net", // Must match exactly what's configured in Azure B2C
+    postLogoutRedirectUri: "https://event-dsh-demo-azhwfrfzeeegbec4.eastus-01.azurewebsites.net", // Redirect back to your app after logout
     navigateToLoginRequestUrl: true, // Navigate back to original request location after login
   },
   cache: {
