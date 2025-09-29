@@ -16,7 +16,7 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
   const handleLogin = () => {
     // Use the exact redirect URI from MSAL config to avoid encoding issues
     const redirectUri = msalConfig.auth.redirectUri || window.location.origin;
-    const directLoginUrl = `https://cloudlabsai.b2clogin.com/cloudlabsai.onmicrosoft.com/B2C_1A_CUSTOM_SIGNUP_SIGNIN/oauth2/v2.0/authorize?client_id=${msalConfig.auth.clientId}&scope=openid%20profile%20email&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&state=${btoa('azureb2c')}`;
+    const directLoginUrl = `https://cloudlabsqaai.b2clogin.com/cloudlabsqaai.onmicrosoft.com/B2C_1A_signup_signin_linkedin/oauth2/v2.0/authorize?client_id=${msalConfig.auth.clientId}&scope=openid%20profile%20email&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&state=${btoa('azureb2c')}`;
     
     console.log('Redirect URI being used:', redirectUri);
     console.log('Full login URL:', directLoginUrl);
