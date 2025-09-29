@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from 'react-router-dom'
 import { ResponsiveContainer } from 'recharts'
+import { useAuth } from './AuthProvider'
 import {
   CheckCircle,
   Calendar,
@@ -68,6 +69,7 @@ const statusColors = {
 
 export function DashboardContent() {
   const navigate = useNavigate()
+  const { userRole } = useAuth()
   const [tracks, setTracks] = useState<any[]>([])
   const [catalogHealth, setCatalogHealth] = useState<{ title: string; percent: number }[]>([])
   const [localizedProgress, setLocalizedProgress] = useState<{ title: string; languages: { name: string; percent: number; status: string }[] }[]>([])
@@ -290,7 +292,7 @@ export function DashboardContent() {
   return (
     <>
     {/* Premium Smooth Animations */}
-    <style jsx>{`
+    <style>{`
       @keyframes float {
         0%, 100% { transform: translateY(0px) rotate(0deg); }
         50% { transform: translateY(-10px) rotate(2deg); }
@@ -461,7 +463,7 @@ export function DashboardContent() {
                     <p className="text-sm text-slate-600 dark:text-slate-400 font-normal">Hot tech topics for labs</p>
                   </div>
                 </div>
-                {((typeof window !== 'undefined' ? localStorage.getItem('dashboard_role') : null) === 'admin') && (
+                {(userRole === 'admin') && (
                   <Button size="sm" variant="outline" className="hover:bg-orange-100 dark:hover:bg-orange-900/30" onClick={() => setIsTrendingDialogOpen(true)}>
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -477,7 +479,7 @@ export function DashboardContent() {
                           </div>
                     <p className="text-xs text-slate-600 dark:text-slate-400 truncate">{item.description}</p>
                         </div>
-                  {((typeof window !== 'undefined' ? localStorage.getItem('dashboard_role') : null) === 'admin') && (
+                  {(userRole === 'admin') && (
                     <div className="ml-2 flex-shrink-0">
                       <Button type="button" size="icon" variant="outline" className="h-7 w-7" onClick={() => handleRemoveTrending(index)}>
                         <Trash2 className="h-4 w-4" />
@@ -614,7 +616,7 @@ export function DashboardContent() {
       {/* Bottom section removed per layout update */}
     </div>
     {/* Admin-only: Add Trending Topic dialog */}
-    {((typeof window !== 'undefined' ? localStorage.getItem('dashboard_role') : null) === 'admin') && (
+    {(userRole === 'admin') && (
       <EntityEditDialog
         open={isTrendingDialogOpen}
         onOpenChange={(v) => { setIsTrendingDialogOpen(v) }}

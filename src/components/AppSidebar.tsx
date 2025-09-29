@@ -10,8 +10,10 @@ import {
   MapPin,
   Globe,
   MessageSquare,
+  Shield,
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
+import { useAuth } from "./AuthProvider"
 
 import {
   Sidebar,
@@ -38,6 +40,7 @@ const reportItems = [
 
 const settingsItems = [
   { title: "Users", url: "/users", icon: Users, adminOnly: true },
+  { title: "Auth Test", url: "/auth-test", icon: Shield, adminOnly: true },
 ]
 
 export function AppSidebar() {
@@ -45,8 +48,8 @@ export function AppSidebar() {
   const location = useLocation()
   const currentPath = location.pathname
   const collapsed = state === "collapsed"
-  const role = typeof window !== 'undefined' ? localStorage.getItem('dashboard_role') : null
-  const visibleSettings = settingsItems.filter((item) => !item.adminOnly || role === 'admin')
+  const { userRole } = useAuth()
+  const visibleSettings = settingsItems.filter((item) => !item.adminOnly || userRole === 'admin')
 
   const isActive = (path: string) => {
     if (path === "/") return currentPath === "/"

@@ -1,8 +1,9 @@
 import React from 'react'
+import { useAuth } from './AuthProvider'
 
 export function AdminOnly({ children }: { children: React.ReactNode }) {
-  const role = typeof window !== 'undefined' ? localStorage.getItem('dashboard_role') : null
-  if (role !== 'admin') return null
+  const { userRole } = useAuth()
+  if (userRole !== 'admin') return null
   return <>{children}</>
 }
 

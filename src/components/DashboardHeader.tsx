@@ -12,17 +12,17 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ThemeToggle } from "@/components/ThemeToggle"
-import { useNavigate } from 'react-router-dom'
-import { useToast } from '@/hooks/use-toast'
+import { AuthButtons } from "@/components/AuthButtons"
+import { useAuth } from "@/components/AuthProvider"
+import { useMsal } from "@azure/msal-react"
 
 export function DashboardHeader() {
-  const navigate = useNavigate()
-  const { toast } = useToast()
-  const role = (typeof window !== 'undefined' ? localStorage.getItem('dashboard_role') : null) || 'user'
-  const userName = (typeof window !== 'undefined' ? localStorage.getItem('dashboard_user_name') : null) || 'User'
-  const userEmail = (typeof window !== 'undefined' ? localStorage.getItem('dashboard_user_email') : null) || ''
-  const displayName = userEmail || userName || role
-  const initials = (role || 'U')
+  const { user, userRole } = useAuth()
+  const { accounts } = useMsal()
+  
+  const displayName = user?.name || user?.username || userRole || 'User'
+  const userEmail = user?.username || ''
+  const initials = (displayName || 'U')
     .split(' ')
     .filter(Boolean)
     .slice(0, 2)
@@ -35,48 +35,14 @@ export function DashboardHeader() {
           <SidebarTrigger className="h-7 w-7 shrink-0 opacity-60 hover:opacity-100 transition-opacity" />
           <div className="hidden md:flex min-w-0">
             <h1 className="text-xl font-semibold text-foreground truncate">
-              Lab and Catalog Updates
+              MS Innovation Event Management
             </h1>
           </div>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
           <ThemeToggle />
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 hover:bg-muted/50 dark:hover:bg-muted/30">
-                <Avatar className="h-9 w-9">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-background border-border dark:bg-background dark:border-border" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none text-foreground capitalize">{role}</p>
-                  <p className="text-xs leading-none text-muted-foreground">{displayName}</p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-border dark:bg-border" />
-              <DropdownMenuItem className="text-foreground hover:bg-muted/50 dark:hover:bg-muted/30" onClick={async () => {
-                try {
-                  const token = localStorage.getItem('dashboard_token')
-                  if (token) await fetch('/api/logout', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } })
-                } catch (err) {
-                  // ignore
-                }
-                localStorage.removeItem('dashboard_token')
-                localStorage.removeItem('dashboard_role')
-                localStorage.removeItem('dashboard_user_name')
-                localStorage.removeItem('dashboard_user_email')
-                toast({ title: 'Signed out', description: 'You have been signed out.' })
-                navigate('/login')
-              }}>Log out</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <AuthButtons />
         </div>
       </div>
     </header>
