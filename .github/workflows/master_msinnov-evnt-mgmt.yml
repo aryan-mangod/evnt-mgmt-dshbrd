@@ -72,17 +72,19 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-app
+      
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_2C56BB6B558348169B4FEC3066243423 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_0D080E0485924CBEB5134C77306DE225 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_D8B124E953D94AC088D69EAD5678ADAC }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_5E5572CA1FFC4DE8BF7E628576D51C21 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_54A6C4388D404D2CA991A147A8631AD6 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_681A3E107B2A4B8FA198EFCC2D98340C }}
  
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'event-dsh-demo'
+          app-name: 'msinnov-evnt-mgmt'
           slot-name: 'Production'
           package: .
+
