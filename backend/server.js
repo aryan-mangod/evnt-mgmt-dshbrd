@@ -296,6 +296,68 @@ app.post('/api/login', (req, res) => {
   }
 });
 
+// B2C Authentication validation endpoint
+app.post('/api/validate-b2c-user', (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Email is required' 
+    });
+  }
+
+  try {
+    const data = readData();
+    
+    // Find user by email in the users array
+    const user = Array.isArray(data.users) && data.users.find(u => 
+      u && u.email && u.email.toLowerCase() === email.toLowerCase()
+    );
+    
+    if (user) {
+      // Generate a session token for the validated B2C user
+      const token = crypto.randomBytes(24).toString('hex');
+      const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+      
+      // Store the token
+      if (!Array.isArray(data.tokens)) data.tokens = [];
+      data.tokens.push({ 
+        token, 
+        userId: user.id, 
+        role: user.role || 'user', 
+        expiresAt,
+        source: 'b2c' // Mark as B2C authenticated
+      });
+      writeData(data);
+      
+      return res.json({ 
+        success: true, 
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role || 'user'
+        },
+        token,
+        role: user.role || 'user'
+      });
+    }
+    
+    return res.status(403).json({ 
+      success: false, 
+      error: 'User not found in authorized user list. Please contact administrator.' 
+    });
+    
+  } catch (err) {
+    console.error('B2C validation error:', err);
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Error validating user credentials' 
+    });
+  }
+});
+
 // Self-service password reset: user provides email/username, oldPassword (temporary) and newPassword
 app.post('/api/reset-password', (req, res) => {
   const { email, username, oldPassword, newPassword } = req.body || {};
