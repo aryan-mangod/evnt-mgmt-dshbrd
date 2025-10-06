@@ -8,32 +8,75 @@ export function RootRedirect() {
   const { isAuthenticated, isAuthorized, isLoading } = useAuth();
   const { inProgress } = useMsal();
   const navigate = useNavigate();
-  const [hasProcessedRedirect, setHasProcessedRedirect] = useState(false);
+  const [hasProcessedCallback, setHasProcessedCallback] = useState(false);
+  const [isHandlingCallback, setIsHandlingCallback] = useState(false);
 
   useEffect(() => {
-    // Check if we're processing a B2C redirect
     const urlParams = new URLSearchParams(window.location.search);
-    const hasAuthCode = urlParams.has('code') || urlParams.has('state');
+    const hasAuthCode = urlParams.has('code');
+    const hasState = urlParams.has('state');
+    const hasError = urlParams.has('error');
     
-    if (hasAuthCode && !hasProcessedRedirect) {
-      console.log('Processing B2C redirect callback...');
-      setHasProcessedRedirect(true);
-      return; // Let MSAL handle the redirect
+    // Check if this is a B2C callback
+    const isB2CCallback = hasAuthCode || hasState || hasError;
+    
+    console.log('RootRedirect - URL Analysis:', {
+      pathname: window.location.pathname,
+      hasAuthCode,
+      hasState,
+      hasError,
+      isB2CCallback,
+      inProgress,
+      isAuthenticated,
+      isAuthorized,
+      isLoading
+    });
+
+    if (isB2CCallback && !hasProcessedCallback) {
+      console.log('🔄 Detected B2C authentication callback - letting MSAL handle it');
+      setIsHandlingCallback(true);
+      setHasProcessedCallback(true);
+      
+      // Let MSAL handle the callback, don't navigate away
+      return;
     }
 
-    if (!isLoading && inProgress === "none") {
+    // Wait for MSAL to finish processing
+    if (inProgress !== "none") {
+      console.log('🕐 MSAL is processing, waiting...');
+      return;
+    }
+
+    // Wait for auth loading to complete
+    if (isLoading) {
+      console.log('🕐 Auth loading, waiting...');
+      return;
+    }
+
+    // Only proceed with navigation if we're not handling a callback
+    if (!isHandlingCallback) {
       if (isAuthenticated && isAuthorized) {
-        // User is fully authenticated and authorized, go to dashboard
-        console.log('User authenticated and authorized, redirecting to dashboard');
+        console.log('✅ User authenticated and authorized - redirecting to dashboard');
         navigate('/dashboard', { replace: true });
       } else if (!isAuthenticated) {
-        // User needs to login
-        console.log('User not authenticated, redirecting to login');
+        console.log('❌ User not authenticated - redirecting to login');
         navigate('/login', { replace: true });
       }
       // If authenticated but not authorized, stay here to show error
+    } else {
+      // We handled a callback, now check the result
+      if (isAuthenticated && isAuthorized) {
+        console.log('✅ Callback processed successfully - redirecting to dashboard');
+        navigate('/dashboard', { replace: true });
+      } else if (isAuthenticated && !isAuthorized) {
+        console.log('⚠️ Callback processed but user not authorized');
+        // Stay here to show access denied
+      } else {
+        console.log('❌ Callback processed but authentication failed - redirecting to login');
+        navigate('/login', { replace: true });
+      }
     }
-  }, [isAuthenticated, isAuthorized, isLoading, inProgress, navigate, hasProcessedRedirect]);
+  }, [isAuthenticated, isAuthorized, isLoading, inProgress, navigate, hasProcessedCallback, isHandlingCallback]);
 
   // If user is authenticated but not authorized, show access denied
   if (isAuthenticated && !isAuthorized && !isLoading) {
@@ -61,7 +104,7 @@ export function RootRedirect() {
         <CardContent className="flex items-center justify-center p-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <span className="ml-3 text-slate-600 dark:text-slate-400">
-            {hasProcessedRedirect ? 'Processing authentication...' : 'Loading...'}
+            {isHandlingCallback ? 'Processing authentication...' : 'Loading...'}
           </span>
         </CardContent>
       </Card>

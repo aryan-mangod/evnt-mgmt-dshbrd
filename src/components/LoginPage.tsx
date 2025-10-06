@@ -9,15 +9,21 @@ import { useNavigate } from "react-router-dom";
 
 export function LoginPage() {
   const { instance, accounts, inProgress } = useMsal();
-  const { isAuthenticated, isAuthorized } = useAuth();
+  const { isAuthenticated, isAuthorized, isLoading } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect to dashboard if already authenticated and authorized
+  // Only redirect if user is fully processed and authorized
   useEffect(() => {
+    // Don't redirect if we're still loading or processing authentication
+    if (isLoading || inProgress !== "none") {
+      return;
+    }
+    
     if (isAuthenticated && isAuthorized) {
+      console.log('User fully authenticated and authorized, redirecting to dashboard');
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, isAuthorized, navigate]);
+  }, [isAuthenticated, isAuthorized, isLoading, inProgress, navigate]);
 
   const handleLogin = () => {
     // Use MSAL's loginRedirect which handles PKCE automatically

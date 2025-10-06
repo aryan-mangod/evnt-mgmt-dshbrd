@@ -12,7 +12,7 @@ export const msalConfig: Configuration = {
     knownAuthorities: ["cloudlabsqaai.b2clogin.com"], // Mark your B2C tenant's domain as trusted.
     redirectUri: window.location.origin, // Use current origin to handle both localhost and production
     postLogoutRedirectUri: window.location.origin + "/login", // Redirect to login page after logout
-    navigateToLoginRequestUrl: true, // Navigate back to original request location after login
+    navigateToLoginRequestUrl: false, // Don't navigate to original request - we handle routing manually
   },
   cache: {
     cacheLocation: "sessionStorage", // Configures cache location. "sessionStorage" is more secure, but "localStorage" gives you SSO between tabs.
