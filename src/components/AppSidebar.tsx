@@ -30,17 +30,17 @@ import {
 } from "@/components/ui/sidebar"
 
 const reportItems = [
-  { title: "Overview", url: "/", icon: BarChart3 },
-  { title: "Catalog Health", url: "/catalog-health", icon: Calendar },
-  { title: "Top 25 Tracks", url: "/top25-tracks", icon: FileText },
-  { title: "Roadmap", url: "/roadmap", icon: MapPin },
-  { title: "Localized Tracks", url: "/localized-tracks", icon: Globe },
-  { title: "Participant Feedback", url: "/participant-feedback", icon: MessageSquare },
+  { title: "Overview", url: "/dashboard", icon: BarChart3 },
+  { title: "Catalog Health", url: "/dashboard/catalog-health", icon: Calendar },
+  { title: "Top 25 Tracks", url: "/dashboard/top25-tracks", icon: FileText },
+  { title: "Roadmap", url: "/dashboard/roadmap", icon: MapPin },
+  { title: "Localized Tracks", url: "/dashboard/localized-tracks", icon: Globe },
+  { title: "Participant Feedback", url: "/dashboard/participant-feedback", icon: MessageSquare },
 ]
 
 const settingsItems = [
-  { title: "Users", url: "/users", icon: Users, adminOnly: true },
-  { title: "Auth Test", url: "/auth-test", icon: Shield, adminOnly: true },
+  { title: "Users", url: "/dashboard/users", icon: Users, adminOnly: true },
+  { title: "Auth Test", url: "/dashboard/auth-test", icon: Shield, adminOnly: true },
 ]
 
 export function AppSidebar() {
@@ -52,7 +52,7 @@ export function AppSidebar() {
   const visibleSettings = settingsItems.filter((item) => !item.adminOnly || userRole === 'admin')
 
   const isActive = (path: string) => {
-    if (path === "/") return currentPath === "/"
+    if (path === "/dashboard") return currentPath === "/dashboard" || currentPath === "/dashboard/"
     return currentPath.startsWith(path)
   }
 
