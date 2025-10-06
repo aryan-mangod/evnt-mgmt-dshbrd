@@ -23,7 +23,7 @@ export function LoginPage() {
     // Use MSAL's loginRedirect which handles PKCE automatically
     instance.loginRedirect({
       ...loginRequest,
-      redirectUri: window.location.origin + "/dashboard",
+      redirectUri: window.location.origin,
     }).catch(e => {
       console.error('Login error:', e);
     });
