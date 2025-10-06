@@ -64,7 +64,7 @@ const App = () => (
           <AuthProvider>
             <BrowserRouter>
               <Routes>
-                {/* Root redirect - handles B2C callback and routing */}
+                {/* Root redirect - simple redirect logic */}
                 <Route path="/" element={<RootRedirect />} />
                 
                 {/* Login page - separate from dashboard */}
