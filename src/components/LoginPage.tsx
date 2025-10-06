@@ -12,18 +12,6 @@ export function LoginPage() {
   const { isAuthenticated, isAuthorized, isLoading } = useAuth();
   const navigate = useNavigate();
 
-  // Check if this is a B2C callback that ended up on login page
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const hasAuthCallback = urlParams.has('code') || urlParams.has('state') || urlParams.has('error');
-    
-    if (hasAuthCallback) {
-      console.log('Login page detected B2C callback parameters - redirecting to root for processing');
-      navigate('/', { replace: true });
-      return;
-    }
-  }, [navigate]);
-
   // Only redirect if user is fully processed and authorized
   useEffect(() => {
     // Don't redirect if we're still loading or processing authentication
@@ -33,9 +21,9 @@ export function LoginPage() {
     
     if (isAuthenticated && isAuthorized) {
       console.log('User fully authenticated and authorized, redirecting to dashboard');
-      navigate('/dashboard', { replace: true });
+      window.location.href = '/dashboard'; // Use window.location to avoid router issues
     }
-  }, [isAuthenticated, isAuthorized, isLoading, inProgress, navigate]);
+  }, [isAuthenticated, isAuthorized, isLoading, inProgress]);
 
   const handleLogin = () => {
     // Use MSAL's loginRedirect which handles PKCE automatically
