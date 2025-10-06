@@ -216,6 +216,13 @@
       "userId": "admin",
       "role": "admin",
       "expiresAt": 1759402987521
+    },
+    {
+      "token": "52ccf33d1693c64771203e8732e9ceb7922dc2f1716ddb9c",
+      "userId": "u_1758721534627",
+      "role": "admin",
+      "expiresAt": 1759842923577,
+      "source": "b2c"
     }
   ],
   "events": [
@@ -439,5 +446,8 @@
     "dashboard.upcomingEvents": 8,
     "dashboard.avgSatisfaction": 4.2
   },
-  "reviews": []
+  "reviews": [],
+  "_metadata": {
+    "lastUpdated": "2025-10-06T13:15:23.577Z"
+  }
 }

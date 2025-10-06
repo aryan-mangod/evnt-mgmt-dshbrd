@@ -13,6 +13,13 @@ const msalInstance = new PublicClientApplication(msalConfig);
 msalInstance.initialize().then(() => {
 	console.log('MSAL initialized successfully');
 	
+	// Handle redirect response if coming back from B2C
+	return msalInstance.handleRedirectPromise();
+}).then((response) => {
+	if (response) {
+		console.log('B2C redirect response received:', response);
+	}
+	
 	// Initialize Azure API client with MSAL instance
 	azureApiClient.setMsalInstance(msalInstance);
 	

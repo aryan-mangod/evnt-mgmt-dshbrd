@@ -99,9 +99,20 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
               <User className="w-4 h-4 mr-2" />
               Login or Sign Up
             </Button>
-            <p className="text-xs text-center text-slate-500 dark:text-slate-400">
-              Secure authentication powered by Microsoft Azure
-            </p>
+            <div className="text-xs text-center text-slate-500 dark:text-slate-400 mt-4">
+              <p>Secure authentication powered by Microsoft Azure</p>
+              <details className="mt-2">
+                <summary className="cursor-pointer">Debug Info</summary>
+                <div className="text-left text-xs mt-2 p-2 bg-slate-100 dark:bg-slate-800 rounded">
+                  <p>Accounts: {accounts.length}</p>
+                  <p>In Progress: {inProgress}</p>
+                  <p>Authenticated: {isAuthenticated ? 'Yes' : 'No'}</p>
+                  <p>Authorized: {isAuthorized ? 'Yes' : 'No'}</p>
+                  <p>Loading: {isLoading ? 'Yes' : 'No'}</p>
+                  {authError && <p className="text-red-500">Error: {authError}</p>}
+                </div>
+              </details>
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -10,7 +10,7 @@ export const msalConfig: Configuration = {
     clientId: "e76ca0fd-0545-4b4f-ba26-aa96f8999f4a", // This is the ONLY mandatory field that you need to supply.
     authority: "https://cloudlabsqaai.b2clogin.com/cloudlabsqaai.onmicrosoft.com/B2C_1A_signup_signin_linkedin", // Choose SUSI as your default authority.
     knownAuthorities: ["cloudlabsqaai.b2clogin.com"], // Mark your B2C tenant's domain as trusted.
-    redirectUri: "https://msinnov-evnt-mgmt-cxgnc8a9gveugzbq.eastus-01.azurewebsites.net", // Must match exactly what's configured in Azure B2C
+    redirectUri: "https://msinnov-evnt-mgmt-cxgnc8a9gveugzbq.eastus-01.azurewebsites.net",// Must match exactly what's configured in Azure B2C
     postLogoutRedirectUri: "https://msinnov-evnt-mgmt-cxgnc8a9gveugzbq.eastus-01.azurewebsites.net", // Redirect back to your app after logout
     navigateToLoginRequestUrl: true, // Navigate back to original request location after login
   },

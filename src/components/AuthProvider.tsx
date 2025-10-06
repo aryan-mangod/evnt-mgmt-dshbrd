@@ -66,16 +66,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUserRole(result.user.role);
         setIsAuthorized(true);
         setAuthError(null);
+        console.log('✅ User authorized successfully');
       } else {
         console.log('User validation failed:', result.error);
         setIsAuthorized(false);
         setAuthError(result.error || 'User not authorized');
         localStorage.removeItem('authToken');
+        console.log('❌ User authorization failed');
       }
     } catch (error) {
       console.error('Error validating user:', error);
+      
+      // Check if it's a network error - if backend is not running
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        setAuthError('Backend server not available. Please contact administrator.');
+        console.log('🔌 Backend server connection failed');
+      } else {
+        setAuthError('Error validating user credentials');
+      }
+      
       setIsAuthorized(false);
-      setAuthError('Error validating user credentials');
       localStorage.removeItem('authToken');
     } finally {
       setIsLoading(false);
