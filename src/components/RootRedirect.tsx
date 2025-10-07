@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
+import { AccessDenied } from "./AccessDenied";
 import { Shield } from "lucide-react";
 import { loginRequest } from "../lib/msalConfig";
 
@@ -39,23 +40,11 @@ export function RootRedirect() {
   // If user is authenticated but not authorized, show access denied
   if (msalAuthenticated && !isAuthorized && !isLoading && authError && authError.toLowerCase().includes('not found')) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-950">
-        <Card className="w-full max-w-md shadow-xl border-red-200">
-          <CardContent className="flex flex-col items-center justify-center p-8">
-            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
-              <span className="text-red-600 dark:text-red-400 text-2xl">❌</span>
-            </div>
-            <h2 className="text-xl font-bold text-red-800 dark:text-red-300 mb-2">Access Denied</h2>
-            <p className="text-red-600 dark:text-red-400 text-center text-sm">
-              Your account <strong>{accounts[0]?.username}</strong> is not in the authorized user list. Please contact an administrator.
-            </p>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleLogout}>Logout</Button>
-              <Button onClick={handleLogin}>Try Different Account</Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <AccessDenied 
+        email={accounts[0]?.username}
+        reason={authError}
+        allowSwitch
+      />
     );
   }
 

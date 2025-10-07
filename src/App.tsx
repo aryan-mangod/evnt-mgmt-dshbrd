@@ -16,7 +16,7 @@ import Top25Tracks from "./pages/Top25Tracks";
 import RoadmapPage from "./pages/RoadmapPage";
 import LocalizedTracksPage from "./pages/LocalizedTracksPage";
 import ParticipantFeedbackPage from "./pages/ParticipantFeedbackPage";
-import AuthTest from "./pages/AuthTest";
+// Removed AuthTest page (deprecated)
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -79,7 +79,8 @@ const App = () => (
                   <Route path="roadmap" element={<RoadmapPage />} />
                   <Route path="localized-tracks" element={<LocalizedTracksPage />} />
                   <Route path="participant-feedback" element={<ParticipantFeedbackPage />} />
-                  <Route path="auth-test" element={<AuthTest />} />
+                  {/* Access denied dedicated route (component added separately) */}
+                  <Route path="access-denied" element={<div className="p-6 text-sm">Access denied</div>} />
                 </Route>
                 
                 {/* Catch-all route */}

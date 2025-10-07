@@ -40,7 +40,6 @@ const reportItems = [
 
 const settingsItems = [
   { title: "Users", url: "/dashboard/users", icon: Users, adminOnly: true },
-  { title: "Auth Test", url: "/dashboard/auth-test", icon: Shield, adminOnly: true },
 ]
 
 export function AppSidebar() {

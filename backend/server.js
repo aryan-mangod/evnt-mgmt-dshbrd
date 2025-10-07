@@ -135,6 +135,27 @@ app.delete('/api/reviews/:id', requireAdmin, (req, res) => {
     res.status(500).json({ success: false, error: 'Delete failed' })
   }
 });
+
+// Serve frontend (production build) if present
+const distDir = path.join(process.cwd(), 'dist');
+if (fs.existsSync(distDir)) {
+  app.use(express.static(distDir));
+}
+
+// SPA fallback: for non-API GET requests not matching a static file, return index.html
+app.get(/^(?!\/api\/).*/, (req, res, next) => {
+  if (req.method !== 'GET') return next();
+  // If file exists (e.g., image), let static middleware handle it
+  const requested = path.join(distDir, req.path);
+  if (fs.existsSync(requested) && fs.lstatSync(requested).isFile()) {
+    return res.sendFile(requested);
+  }
+  const indexPath = path.join(distDir, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+  return next();
+});
 // Helper: get/set resource arrays inside data.json
 const VALID_RESOURCES = new Set(['tracks', 'catalog', 'users', 'events']);
 
