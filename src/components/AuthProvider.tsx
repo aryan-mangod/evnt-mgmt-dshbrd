@@ -2,12 +2,22 @@ import { useMsal } from "@azure/msal-react";
 import { createContext, useContext, useEffect, useState } from "react";
 
 interface AuthContextType {
+  /** True only when BOTH MSAL sign-in happened and backend authorization succeeded */
   isAuthenticated: boolean;
+  /** Raw MSAL account object or validated backend user */
   user: any;
+  /** Role coming from backend validation */
   userRole: string;
+  /** Overall loading (MSAL in progress OR backend validation happening) */
   isLoading: boolean;
+  /** Backend authorization success (user found + role accepted) */
   isAuthorized: boolean;
+  /** Error string if backend validation failed or backend unreachable */
   authError: string | null;
+  /** Indicates MSAL has an authenticated account (before backend check) */
+  msalAuthenticated: boolean;
+  /** Fine grained phase to help UI: idle | msal | validating-backend | ready */
+  phase: string;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -17,6 +27,8 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   isAuthorized: false,
   authError: null,
+  msalAuthenticated: false,
+  phase: 'idle'
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -26,13 +38,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [validatedUser, setValidatedUser] = useState<any>(null);
+  const [phase, setPhase] = useState<'idle' | 'msal' | 'validating-backend' | 'ready'>('idle');
 
-  const isAuthenticated = accounts.length > 0;
+  // MSAL layer auth (raw) – separate from backend authorization
+  const msalAuthenticated = accounts.length > 0;
   const b2cUser = accounts[0] || null;
 
   // Function to validate B2C user against backend
   const validateUserInBackend = async (email: string) => {
     try {
+      setPhase('validating-backend');
       setIsLoading(true);
       setAuthError(null);
       
@@ -61,6 +76,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('User validation successful:', result.user);
         // Store the token for API calls
         localStorage.setItem('authToken', result.token);
+        // Cache metadata (24 min TTL example => 1440 seconds; adjust as needed). Use 10 minutes for now.
+        const cacheEntry = {
+          email,
+          role: result.user.role,
+          token: result.token,
+          user: result.user,
+          expiresAt: Date.now() + 10 * 60 * 1000
+        };
+        localStorage.setItem('authCache', JSON.stringify(cacheEntry));
         
         setValidatedUser(result.user);
         setUserRole(result.user.role);
@@ -89,42 +113,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('authToken');
     } finally {
       setIsLoading(false);
+      setPhase('ready');
     }
   };
 
   useEffect(() => {
     console.log('AuthProvider state:', { 
       inProgress, 
-      isAuthenticated, 
+      msalAuthenticated, 
       userEmail: b2cUser?.username,
-      accountsCount: accounts.length 
+      accountsCount: accounts.length,
+      phase
     });
-    
-    if (inProgress === "none") {
-      if (isAuthenticated && b2cUser?.username) {
-        console.log('Validating B2C user:', b2cUser.username);
-        // B2C user is authenticated, now validate against our backend
-        validateUserInBackend(b2cUser.username);
-      } else {
-        console.log('No B2C authentication or in progress');
-        // No B2C authentication
-        setIsLoading(false);
-        setIsAuthorized(false);
-        setValidatedUser(null);
-        setUserRole('user');
-        localStorage.removeItem('authToken');
-      }
+
+    if (inProgress !== 'none') {
+      setPhase('msal');
+      return; // still processing MSAL
     }
-  }, [isAuthenticated, b2cUser?.username, inProgress]);
+
+    // MSAL finished
+    if (msalAuthenticated && b2cUser?.username) {
+      // Only revalidate if we don't already have a validatedUser for same email
+      const cacheRaw = localStorage.getItem('authCache');
+      let usedCache = false;
+      if (cacheRaw) {
+        try {
+          const parsed = JSON.parse(cacheRaw);
+          if (parsed.email === b2cUser.username && parsed.expiresAt > Date.now()) {
+            console.log('Using cached authorization for user:', parsed.email);
+            setValidatedUser(parsed.user);
+            setUserRole(parsed.role);
+            setIsAuthorized(true);
+            localStorage.setItem('authToken', parsed.token);
+            setPhase('ready');
+            setIsLoading(false);
+            usedCache = true;
+          } else if (parsed.email === b2cUser.username && parsed.expiresAt <= Date.now()) {
+            console.log('Cached authorization expired, revalidating...');
+          }
+        } catch (_) {
+          // Ignore parse errors
+        }
+      }
+      if (!usedCache && (!validatedUser || validatedUser.email !== b2cUser.username)) {
+        console.log('Validating B2C user (no valid cache):', b2cUser.username);
+        validateUserInBackend(b2cUser.username);
+      }
+    } else {
+      // No MSAL account present
+      if (phase !== 'idle') setPhase('idle');
+      setIsLoading(false);
+      setIsAuthorized(false);
+      setValidatedUser(null);
+      setUserRole('user');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('authCache');
+    }
+  }, [msalAuthenticated, b2cUser?.username, inProgress, validatedUser, phase]);
 
   return (
     <AuthContext.Provider value={{
-      isAuthenticated: isAuthenticated && isAuthorized,
+      isAuthenticated: msalAuthenticated && isAuthorized,
       user: validatedUser || b2cUser,
       userRole,
       isLoading: isLoading || inProgress !== "none",
       isAuthorized,
       authError,
+      msalAuthenticated,
+      phase,
     }}>
       {children}
     </AuthContext.Provider>

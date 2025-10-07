@@ -9,21 +9,15 @@ import { useNavigate } from "react-router-dom";
 
 export function LoginPage() {
   const { instance, accounts, inProgress } = useMsal();
-  const { isAuthenticated, isAuthorized, isLoading } = useAuth();
+  const { isAuthenticated, isAuthorized, isLoading, msalAuthenticated, phase, authError } = useAuth();
   const navigate = useNavigate();
 
   // Only redirect if user is fully processed and authorized
   useEffect(() => {
-    // Don't redirect if we're still loading or processing authentication
-    if (isLoading || inProgress !== "none") {
-      return;
-    }
-    
     if (isAuthenticated && isAuthorized) {
-      console.log('User fully authenticated and authorized, redirecting to dashboard');
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, isAuthorized, isLoading, inProgress, navigate]);
+  }, [isAuthenticated, isAuthorized, navigate]);
 
   const handleLogin = () => {
     // Use MSAL's loginRedirect which handles PKCE automatically
@@ -36,15 +30,13 @@ export function LoginPage() {
   };
 
   // Show loading state during authentication
-  if (inProgress === "login") {
+  if (inProgress === "login" || phase === 'msal') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-950">
         <Card className="w-full max-w-md">
           <CardContent className="flex items-center justify-center p-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-3 text-slate-600 dark:text-slate-400">
-              Authenticating...
-            </span>
+            <span className="ml-3 text-slate-600 dark:text-slate-400">Signing you in...</span>
           </CardContent>
         </Card>
       </div>
@@ -66,10 +58,19 @@ export function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button onClick={handleLogin} className="w-full" size="lg">
+          <Button onClick={handleLogin} className="w-full" size="lg" disabled={inProgress !== 'none' || phase === 'validating-backend'}>
             <User className="w-4 h-4 mr-2" />
             Login or Sign Up
           </Button>
+          {phase === 'validating-backend' && (
+            <div className="flex items-center justify-center text-xs text-slate-600 dark:text-slate-400">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+              Validating your access...
+            </div>
+          )}
+          {authError && msalAuthenticated && !isAuthorized && phase === 'ready' && (
+            <p className="text-red-500 text-xs text-center">{authError}</p>
+          )}
           <div className="text-xs text-center text-slate-500 dark:text-slate-400 mt-4">
             <p>Secure authentication powered by Microsoft Azure</p>
             <details className="mt-2">
@@ -77,6 +78,10 @@ export function LoginPage() {
               <div className="text-left text-xs mt-2 p-2 bg-slate-100 dark:bg-slate-800 rounded">
                 <p>Accounts: {accounts.length}</p>
                 <p>In Progress: {inProgress}</p>
+                <p>Phase: {phase}</p>
+                <p>MSAL Auth: {String(msalAuthenticated)}</p>
+                <p>Authorized: {String(isAuthorized)}</p>
+                <p>Auth Error: {authError || 'None'}</p>
                 <p>Current URL: {window.location.href}</p>
               </div>
             </details>
