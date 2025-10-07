@@ -21,9 +21,9 @@ export function LoginPage() {
     
     if (isAuthenticated && isAuthorized) {
       console.log('User fully authenticated and authorized, redirecting to dashboard');
-      window.location.href = '/dashboard'; // Use window.location to avoid router issues
+      navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, isAuthorized, isLoading, inProgress]);
+  }, [isAuthenticated, isAuthorized, isLoading, inProgress, navigate]);
 
   const handleLogin = () => {
     // Use MSAL's loginRedirect which handles PKCE automatically

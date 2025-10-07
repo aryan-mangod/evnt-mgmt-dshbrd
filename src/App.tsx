@@ -64,11 +64,11 @@ const App = () => (
           <AuthProvider>
             <BrowserRouter>
               <Routes>
-                {/* Root redirect - simple redirect logic */}
+                {/* Root handles both login and B2C callbacks */}
                 <Route path="/" element={<RootRedirect />} />
                 
-                {/* Login page - separate from dashboard */}
-                <Route path="/login" element={<LoginPage />} />
+                {/* Keep login route for backward compatibility */}
+                <Route path="/login" element={<Navigate to="/" replace />} />
                 
                 {/* Protected dashboard routes */}
                 <Route path="/dashboard" element={<ProtectedRoute />}>
