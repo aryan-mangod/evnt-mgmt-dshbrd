@@ -1,5 +1,5 @@
 import { useAuth } from "./AuthProvider";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
@@ -9,7 +9,7 @@ import { loginRequest } from "../lib/msalConfig";
 
 export function RootRedirect() {
   const { isAuthenticated, isAuthorized, isLoading, msalAuthenticated, phase, authError } = useAuth();
-  const { instance, inProgress } = useMsal();
+  const { instance, inProgress, accounts } = useMsal();
   const navigate = useNavigate();
 
   const handleLogin = () => {
@@ -21,13 +21,23 @@ export function RootRedirect() {
 
   useEffect(() => {
     if (isAuthenticated && isAuthorized) {
-      // fully authorized → dashboard
       navigate('/dashboard', { replace: true });
     }
   }, [isAuthenticated, isAuthorized, navigate]);
 
+  // Detect if we are returning from an MSAL redirect (hash params) to avoid showing login prematurely
+  const processingRedirect = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const h = window.location.hash || '';
+    return /(code=|id_token=|error=)/i.test(h) && inProgress !== 'none';
+  }, [inProgress]);
+
+  const handleLogout = () => {
+    instance.logoutRedirect({ postLogoutRedirectUri: window.location.origin }).catch(e => console.error('Logout error:', e));
+  };
+
   // If user is authenticated but not authorized, show access denied
-  if (msalAuthenticated && !isAuthorized && !isLoading && authError && authError.toLowerCase().includes('not authorized')) {
+  if (msalAuthenticated && !isAuthorized && !isLoading && authError && authError.toLowerCase().includes('not found')) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-950">
         <Card className="w-full max-w-md shadow-xl border-red-200">
@@ -37,8 +47,12 @@ export function RootRedirect() {
             </div>
             <h2 className="text-xl font-bold text-red-800 dark:text-red-300 mb-2">Access Denied</h2>
             <p className="text-red-600 dark:text-red-400 text-center text-sm">
-              You are not authorized to access this portal. Please contact your administrator.
+              Your account <strong>{accounts[0]?.username}</strong> is not in the authorized user list. Please contact an administrator.
             </p>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleLogout}>Logout</Button>
+              <Button onClick={handleLogin}>Try Different Account</Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -46,7 +60,7 @@ export function RootRedirect() {
   }
 
   // Show loading during authentication process
-  if (inProgress === "login" || phase === 'msal') {
+  if (processingRedirect || inProgress === "login" || phase === 'msal') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-950">
         <Card className="w-full max-w-md">
@@ -88,7 +102,7 @@ export function RootRedirect() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {isLoading ? (
+          {(isLoading || processingRedirect) ? (
             <div className="flex items-center justify-center py-4">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
               <span className="ml-3 text-slate-600 dark:text-slate-400">Loading...</span>

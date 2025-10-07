@@ -11,7 +11,7 @@ export const msalConfig: Configuration = {
     authority: "https://cloudlabsqaai.b2clogin.com/cloudlabsqaai.onmicrosoft.com/B2C_1A_signup_signin_linkedin", // Choose SUSI as your default authority.
     knownAuthorities: ["cloudlabsqaai.b2clogin.com"], // Mark your B2C tenant's domain as trusted.
     redirectUri: window.location.origin, // Use current origin to handle both localhost and production
-    postLogoutRedirectUri: window.location.origin + "/login", // Redirect to login page after logout
+  postLogoutRedirectUri: window.location.origin, // Return to root which handles login/callback
     navigateToLoginRequestUrl: false, // Don't navigate to original request - we handle routing manually
   },
   cache: {

@@ -43,6 +43,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // MSAL layer auth (raw) – separate from backend authorization
   const msalAuthenticated = accounts.length > 0;
   const b2cUser = accounts[0] || null;
+  // Prefer explicit email claims over username (B2C sometimes sets username to a technical identifier)
+  const primaryEmail: string | undefined = (b2cUser as any)?.idTokenClaims?.emails?.[0]
+    || (b2cUser as any)?.idTokenClaims?.email
+    || b2cUser?.username;
 
   // Function to validate B2C user against backend
   const validateUserInBackend = async (email: string) => {
@@ -121,7 +125,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('AuthProvider state:', { 
       inProgress, 
       msalAuthenticated, 
-      userEmail: b2cUser?.username,
+      rawUsername: b2cUser?.username,
+      claimedEmail: (b2cUser as any)?.idTokenClaims?.email,
+      claimedEmailsArr: (b2cUser as any)?.idTokenClaims?.emails,
+      resolvedPrimaryEmail: primaryEmail,
       accountsCount: accounts.length,
       phase
     });
@@ -132,14 +139,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // MSAL finished
-    if (msalAuthenticated && b2cUser?.username) {
+    if (msalAuthenticated && primaryEmail) {
       // Only revalidate if we don't already have a validatedUser for same email
       const cacheRaw = localStorage.getItem('authCache');
       let usedCache = false;
       if (cacheRaw) {
         try {
           const parsed = JSON.parse(cacheRaw);
-          if (parsed.email === b2cUser.username && parsed.expiresAt > Date.now()) {
+          if (parsed.email === primaryEmail && parsed.expiresAt > Date.now()) {
             console.log('Using cached authorization for user:', parsed.email);
             setValidatedUser(parsed.user);
             setUserRole(parsed.role);
@@ -148,16 +155,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setPhase('ready');
             setIsLoading(false);
             usedCache = true;
-          } else if (parsed.email === b2cUser.username && parsed.expiresAt <= Date.now()) {
+          } else if (parsed.email === primaryEmail && parsed.expiresAt <= Date.now()) {
             console.log('Cached authorization expired, revalidating...');
           }
         } catch (_) {
           // Ignore parse errors
         }
       }
-      if (!usedCache && (!validatedUser || validatedUser.email !== b2cUser.username)) {
-        console.log('Validating B2C user (no valid cache):', b2cUser.username);
-        validateUserInBackend(b2cUser.username);
+      if (!usedCache && (!validatedUser || validatedUser.email !== primaryEmail)) {
+        console.log('Validating B2C user (no valid cache):', primaryEmail);
+        validateUserInBackend(primaryEmail);
       }
     } else {
       // No MSAL account present
@@ -169,7 +176,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('authToken');
       localStorage.removeItem('authCache');
     }
-  }, [msalAuthenticated, b2cUser?.username, inProgress, validatedUser, phase]);
+  }, [msalAuthenticated, primaryEmail, inProgress, validatedUser, phase]);
 
   return (
     <AuthContext.Provider value={{
