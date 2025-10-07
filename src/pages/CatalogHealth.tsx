@@ -12,6 +12,7 @@ import { Calendar, TrendingUp, ChevronLeft, ChevronRight, Clock, Plus, Edit, Tra
 import { useState, useEffect } from "react"
 import { FileUploadModal } from "@/components/FileUploadModal"
 import api from "@/lib/api"
+import { useAuth } from '@/components/AuthProvider'
 
 interface CatalogItem {
   sr: number;
@@ -40,7 +41,7 @@ const getStatusBadge = (status: string) => {
 }
 
 export default function CatalogHealth() {
-  const role = typeof window !== 'undefined' ? localStorage.getItem('dashboard_role') : null
+  const { userRole: role } = useAuth()
   const [catalogData, setCatalogData] = useState<CatalogItem[]>(initialCatalogData)
   const [currentPage, setCurrentPage] = useState(1)
   const [editingItem, setEditingItem] = useState<CatalogItem | null>(null)

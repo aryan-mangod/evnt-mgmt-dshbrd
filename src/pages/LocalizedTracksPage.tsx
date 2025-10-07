@@ -14,6 +14,7 @@ import EntityEditDialog from '@/components/EntityEditDialog'
 import catalogService from '@/lib/services/catalogService'
 import { isNonEmptyString } from '@/lib/validation'
 import { useState, useEffect } from "react"
+import { useAuth } from '@/components/AuthProvider'
 import { useToast } from '@/hooks/use-toast'
 import api from '@/lib/api'
 
@@ -50,7 +51,7 @@ const getAvailabilityBadge = (status: string) => {
 }
 
 export default function LocalizedTracksPage() {
-  const role = typeof window !== 'undefined' ? localStorage.getItem('dashboard_role') : null
+  const { userRole: role } = useAuth()
   const [localizedTracksData, setLocalizedTracksData] = useState<LocalizedTrack[]>(initialLocalizedTracksData)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)

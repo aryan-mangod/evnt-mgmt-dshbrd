@@ -378,7 +378,7 @@ export function DashboardContent() {
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 relative z-10">
         
         <div className="group transition-all duration-500 ease-out hover:scale-[1.02] hover:-translate-y-1 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-          <div onClick={() => navigate('/top25-tracks')} className="relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-blue-50/40 dark:from-slate-800 dark:to-slate-700/50 border border-blue-200/50 dark:border-blue-800/30 p-8 shadow-lg hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-500 cursor-pointer">
+          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-blue-50/40 dark:from-slate-800 dark:to-slate-700/50 border border-blue-200/50 dark:border-blue-800/30 p-8 shadow-lg hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-500">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-slate-500/5 dark:from-blue-400/10 dark:to-slate-400/10"></div>
             <div className="absolute inset-0 bg-gradient-to-br from-blue-50/60 to-slate-50/60 dark:from-blue-950/30 dark:to-slate-950/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <div className="absolute top-0 right-0 w-20 h-20 bg-blue-200/30 dark:bg-blue-700/20 rounded-full -translate-y-10 translate-x-10"></div>
@@ -492,7 +492,7 @@ export function DashboardContent() {
           </Card>
 
           {/* Catalog Health */}
-          <Card onClick={() => navigate('/catalog-health')} className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-rose-50/30 dark:from-slate-800 dark:to-slate-700/50 border border-rose-200/40 dark:border-rose-800/25 shadow-lg hover:shadow-xl hover:shadow-rose-500/8 transition-all duration-500 ease-out hover:-translate-y-1 hover:scale-[1.01] cursor-pointer animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+          <Card onClick={() => navigate('/dashboard/catalog-health')} className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-rose-50/30 dark:from-slate-800 dark:to-slate-700/50 border border-rose-200/40 dark:border-rose-800/25 shadow-lg hover:shadow-xl hover:shadow-rose-500/8 transition-all duration-500 ease-out hover:-translate-y-1 hover:scale-[1.01] cursor-pointer animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
             <div className="absolute inset-0 bg-gradient-to-br from-rose-500/3 via-transparent to-slate-500/3 dark:from-rose-400/5 dark:to-slate-400/5"></div>
             <div className="absolute inset-0 bg-gradient-to-br from-rose-50/50 to-slate-50/50 dark:from-rose-950/20 dark:to-slate-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
             <CardHeader className="relative z-10 border-b border-rose-200/40 dark:border-rose-800/25">
@@ -527,7 +527,7 @@ export function DashboardContent() {
           </Card>
 
           {/* Localized Tracks */}
-          <Card onClick={() => navigate('/localized-tracks')} className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-cyan-50/30 dark:from-slate-800 dark:to-slate-700/50 border border-cyan-200/40 dark:border-cyan-800/25 shadow-lg hover:shadow-xl hover:shadow-cyan-500/8 transition-all duration-500 ease-out hover:-translate-y-1 hover:scale-[1.01] cursor-pointer animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
+          <Card onClick={() => navigate('/dashboard/localized-tracks')} className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-cyan-50/30 dark:from-slate-800 dark:to-slate-700/50 border border-cyan-200/40 dark:border-cyan-800/25 shadow-lg hover:shadow-xl hover:shadow-cyan-500/8 transition-all duration-500 ease-out hover:-translate-y-1 hover:scale-[1.01] cursor-pointer animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
             <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/3 via-transparent to-slate-500/3 dark:from-cyan-400/5 dark:to-slate-400/5"></div>
             <div className="absolute inset-0 bg-gradient-to-br from-cyan-50/50 to-slate-50/50 dark:from-cyan-950/20 dark:to-slate-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
             <CardHeader className="relative z-10 border-b border-cyan-200/40 dark:border-cyan-800/25 pb-4">
@@ -564,7 +564,7 @@ export function DashboardContent() {
           </Card>
 
         {/* Lab Development Roadmap */}
-        <Card onClick={() => navigate('/roadmap')} className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-violet-50/30 dark:from-slate-800 dark:to-slate-700/50 border border-violet-200/40 dark:border-violet-800/25 shadow-lg hover:shadow-xl hover:shadow-violet-500/8 transition-all duration-500 ease-out hover:-translate-y-1 hover:scale-[1.01] cursor-pointer animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
+  <Card onClick={() => navigate('/dashboard/roadmap')} className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white to-violet-50/30 dark:from-slate-800 dark:to-slate-700/50 border border-violet-200/40 dark:border-violet-800/25 shadow-lg hover:shadow-xl hover:shadow-violet-500/8 transition-all duration-500 ease-out hover:-translate-y-1 hover:scale-[1.01] cursor-pointer animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
           <div className="absolute inset-0 bg-gradient-to-br from-violet-500/3 via-transparent to-slate-500/3 dark:from-violet-400/5 dark:to-slate-400/5"></div>
           <div className="absolute inset-0 bg-gradient-to-br from-violet-50/50 to-slate-50/50 dark:from-violet-950/20 dark:to-slate-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
           <CardHeader className="relative z-10 border-b border-violet-200/40 dark:border-violet-800/25 pb-4">
