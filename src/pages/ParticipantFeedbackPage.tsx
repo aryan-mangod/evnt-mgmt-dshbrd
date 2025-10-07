@@ -1,4 +1,5 @@
 import { DashboardLayout } from "@/components/DashboardLayout"
+import { useAuth } from '@/components/AuthProvider'
 import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Plus, X, ChevronLeft, ChevronRight, Trash2, Eye } from "lucide-react"
@@ -8,7 +9,7 @@ import { toast } from "@/hooks/use-toast"
 // Simplified: upload-only screen for feedback screenshots
 
 export default function ParticipantFeedbackPage() {
-  const role = typeof window !== 'undefined' ? localStorage.getItem('dashboard_role') : null
+  const { userRole: role } = useAuth()
   const [items, setItems] = useState<any[]>([])
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [selectedIndex, setSelectedIndex] = useState<number>(0)

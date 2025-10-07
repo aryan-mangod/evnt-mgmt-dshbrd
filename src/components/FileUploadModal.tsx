@@ -27,10 +27,11 @@ const getFileIcon = (fileType: string) => {
 }
 
 import api from '@/lib/api'
+import { useAuth } from '@/components/AuthProvider'
 
 export function FileUploadModal({ trigger, accept, uploadTo }: FileUploadModalProps) {
-  const role = typeof window !== 'undefined' ? localStorage.getItem('dashboard_role') : null
-  if (role !== 'admin') return null
+  const { userRole } = useAuth()
+  if (userRole !== 'admin') return null
   const [isOpen, setIsOpen] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [isDragOver, setIsDragOver] = useState(false)

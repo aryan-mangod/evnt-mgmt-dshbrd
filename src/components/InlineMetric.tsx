@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useAuth } from '@/components/AuthProvider'
 import { Pencil } from 'lucide-react'
 import metricsService from '@/lib/services/metricsService'
 import { Input } from '@/components/ui/input'
@@ -10,7 +11,7 @@ interface InlineMetricProps {
 }
 
 export default function InlineMetric({ metricKey, value, onValue }: InlineMetricProps) {
-  const role = typeof window !== 'undefined' ? localStorage.getItem('dashboard_role') : null
+  const { userRole: role } = useAuth()
   const [editing, setEditing] = useState(false)
   const [current, setCurrent] = useState(String(value ?? ''))
   const [draft, setDraft] = useState(String(value ?? ''))

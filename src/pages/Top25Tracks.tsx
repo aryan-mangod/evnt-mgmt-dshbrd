@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { FileText, TrendingUp, ChevronLeft, ChevronRight, Plus, Edit, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
+import { useAuth } from '@/components/AuthProvider'
 import { FileUploadModal } from "@/components/FileUploadModal"
 import MetricsEditor from '@/components/MetricsEditor'
 
@@ -68,7 +69,7 @@ const getStatusBadge = (status: string) => {
 export default function Top25Tracks() {
   const [tracksData, setTracksData] = useState<TrackItem[]>(initialTracksData);
   // role determined by auth; read from localStorage (App sets it on login)
-  const role = typeof window !== 'undefined' ? localStorage.getItem('dashboard_role') : null;
+  const { userRole: role } = useAuth();
   const [currentPage, setCurrentPage] = useState(1)
   const [editingItem, setEditingItem] = useState<TrackItem | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)

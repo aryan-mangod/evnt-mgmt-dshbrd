@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { Calendar, MapPin, Edit, Trash2, Plus } from "lucide-react"
 import { useState, useEffect } from "react"
+import { useAuth } from '@/components/AuthProvider'
 import catalogService from '@/lib/services/catalogService'
 import EntityEditDialog from '@/components/EntityEditDialog'
 import { useToast } from '@/hooks/use-toast'
@@ -139,7 +140,7 @@ export default function RoadmapPage() {
         </div>
         <div className="flex justify-end">
           {/* Add Roadmap button for admins */}
-          {(typeof window !== 'undefined' ? localStorage.getItem('dashboard_role') : null) === 'admin' && (
+          {useAuth().userRole === 'admin' && (
             <Button size="sm" onClick={() => { setEditingItem({ id: 0, trackTitle: '', phase: '', eta: '' }); setIsEditDialogOpen(true); }}>
               <Plus className="h-4 w-4" />
               Add Roadmap
