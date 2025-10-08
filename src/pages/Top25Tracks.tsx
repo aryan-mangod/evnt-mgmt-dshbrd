@@ -219,9 +219,7 @@ export default function Top25Tracks() {
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Top 25 Tracks</h1>
-            <p className="text-muted-foreground">
-              As of 1st August 2025 - Look for tag titled "Trending" for these in the Request Management Portal – CloudEvents Admin Center
-            </p>
+            {/* Subtitle removed per request */}
           </div>
           {role === 'admin' && (
             <div className="flex items-center gap-2">

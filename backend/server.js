@@ -367,7 +367,7 @@ app.post('/api/validate-b2c-user', (req, res) => {
     
     return res.status(403).json({ 
       success: false, 
-      error: 'User not found in authorized user list. Please contact administrator.' 
+      error: 'User not found. Please contact administrator.' 
     });
     
   } catch (err) {

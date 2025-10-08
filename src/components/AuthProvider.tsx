@@ -50,72 +50,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Function to validate B2C user against backend
   const validateUserInBackend = async (email: string) => {
+    let timeoutId: number | undefined;
     try {
       setPhase('validating-backend');
       setIsLoading(true);
       setAuthError(null);
-      
       console.log('Validating user with email:', email);
-      
-      // Use relative URL for production, full URL for development
-      const apiUrl = window.location.hostname === 'localhost' 
+      const apiUrl = window.location.hostname === 'localhost'
         ? 'http://localhost:4000/api/validate-b2c-user'
         : '/api/validate-b2c-user';
-      
       console.log('API URL:', apiUrl);
-      
+
+      // Implement a timeout (15s) to prevent infinite spinner if network hangs
+      const controller = new AbortController();
+      timeoutId = window.setTimeout(() => controller.abort(), 15000);
+
       const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
-      const result = await response.json();
-      
+      let result: any = {};
+      try { result = await response.json(); } catch { /* ignore JSON parse errors */ }
       console.log('API Response:', { status: response.status, result });
 
       if (response.ok && result.success) {
-        console.log('User validation successful:', result.user);
-        // Store the token for API calls
         localStorage.setItem('authToken', result.token);
-        // Cache metadata (24 min TTL example => 1440 seconds; adjust as needed). Use 10 minutes for now.
-        const cacheEntry = {
-          email,
-          role: result.user.role,
-          token: result.token,
-          user: result.user,
-          expiresAt: Date.now() + 10 * 60 * 1000
-        };
+        const cacheEntry = { email, role: result.user.role, token: result.token, user: result.user, expiresAt: Date.now() + 10 * 60 * 1000 };
         localStorage.setItem('authCache', JSON.stringify(cacheEntry));
-        
         setValidatedUser(result.user);
         setUserRole(result.user.role);
         setIsAuthorized(true);
         setAuthError(null);
         console.log('✅ User authorized successfully');
       } else {
-        console.log('User validation failed:', result.error);
+        // Distinguish 403 (user not found) from other errors
+        if (response.status === 403) {
+          setAuthError(result.error || 'User not found in authorized list');
+        } else if (response.status === 400) {
+          setAuthError(result.error || 'Invalid request');
+        } else if (response.status === 500) {
+          setAuthError(result.error || 'Server error during validation');
+        } else {
+          setAuthError(result.error || 'User not authorized');
+        }
         setIsAuthorized(false);
-        setAuthError(result.error || 'User not authorized');
         localStorage.removeItem('authToken');
         console.log('❌ User authorization failed');
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (timeoutId) clearTimeout(timeoutId);
       console.error('Error validating user:', error);
-      
-      // Check if it's a network error - if backend is not running
-      if (error instanceof TypeError && error.message.includes('fetch')) {
+      if (error && error.name === 'AbortError') {
+        setAuthError('Validation timeout. Please retry or contact administrator.');
+      } else if (error instanceof TypeError && String(error.message).includes('fetch')) {
         setAuthError('Backend server not available. Please contact administrator.');
-        console.log('🔌 Backend server connection failed');
       } else {
         setAuthError('Error validating user credentials');
       }
-      
       setIsAuthorized(false);
       localStorage.removeItem('authToken');
     } finally {
+      if (timeoutId) clearTimeout(timeoutId);
       setIsLoading(false);
       setPhase('ready');
     }

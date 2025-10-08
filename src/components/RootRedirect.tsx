@@ -77,17 +77,20 @@ export function RootRedirect() {
 
   // Show login form if not authenticated or still loading
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-950">
-      <Card className="w-full max-w-md shadow-xl">
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-slate-50 via-indigo-50 to-blue-100 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950">
+      {/* Decorative radial gradients */}
+      <div className="pointer-events-none absolute -top-32 -left-32 w-[480px] h-[480px] rounded-full bg-gradient-to-br from-indigo-300/40 via-purple-300/30 to-transparent dark:from-indigo-800/30 dark:via-fuchsia-700/20 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-0 right-0 w-[520px] h-[520px] rounded-full bg-gradient-to-tr from-blue-300/30 via-cyan-200/20 to-transparent dark:from-blue-800/30 dark:via-cyan-700/20 blur-3xl" />
+      <Card className="w-full max-w-md shadow-2xl relative z-10 border border-white/50 dark:border-white/10 bg-white/65 dark:bg-slate-900/55 backdrop-blur-xl supports-[backdrop-filter]:bg-white/55 dark:supports-[backdrop-filter]:bg-slate-900/50">
         <CardHeader className="text-center space-y-1">
           <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
             <Shield className="w-8 h-8 text-blue-600 dark:text-blue-400" />
           </div>
           <CardTitle className="text-2xl font-bold text-slate-800 dark:text-slate-200">
-            CloudLabs Admin Portal
+            MS Innovation Event Management Portal
           </CardTitle>
           <CardDescription className="text-slate-600 dark:text-slate-400">
-            Please sign in to access the admin dashboard
+            Please login or signup to continue
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -97,12 +100,12 @@ export function RootRedirect() {
               <span className="ml-3 text-slate-600 dark:text-slate-400">Loading...</span>
             </div>
           ) : (
-            <Button 
-              onClick={handleLogin} 
+            <Button
+              onClick={handleLogin}
               className="w-full"
               disabled={inProgress !== "none"}
             >
-              Sign in with SSO
+              Login or Signup
             </Button>
           )}
           {authError && !msalAuthenticated && (
