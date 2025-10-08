@@ -115,6 +115,8 @@ export default function RoadmapPage() {
     })
   }
 
+  const { userRole: role } = useAuth()
+
   const handleDelete = (item: RoadmapItem) => {
     if (window.confirm(`Are you sure you want to delete "${item.trackTitle}"?`)) {
       ;(async () => {
@@ -140,7 +142,7 @@ export default function RoadmapPage() {
         </div>
         <div className="flex justify-end">
           {/* Add Roadmap button for admins */}
-          {useAuth().userRole === 'admin' && (
+          {role === 'admin' && (
             <Button size="sm" onClick={() => { setEditingItem({ id: 0, trackTitle: '', phase: '', eta: '' }); setIsEditDialogOpen(true); }}>
               <Plus className="h-4 w-4" />
               Add Roadmap
@@ -187,6 +189,7 @@ export default function RoadmapPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
+                            {role === 'admin' && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -195,6 +198,8 @@ export default function RoadmapPage() {
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
+                            )}
+                            {role === 'admin' && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -203,6 +208,7 @@ export default function RoadmapPage() {
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

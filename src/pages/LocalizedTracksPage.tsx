@@ -20,23 +20,24 @@ import api from '@/lib/api'
 
 interface LocalizedTrack {
   trackTitle: string
-  spanish: string
-  portuguese: string
   sr?: number
+  languages: Record<string, string> // key: language name (lowercase id), value: status
+  originalOrder?: number
 }
 
-const initialLocalizedTracksData: LocalizedTrack[] = [
-  { trackTitle: "GitHub Copilot Innovation Workshop", spanish: "Available", portuguese: "Available" },
-  { trackTitle: "Build Intelligent Apps with Microsoft's Copilot Stack & Azure OpenAI", spanish: "Available", portuguese: "Available" },
-  { trackTitle: "Get Started with OpenAI and Build Natural Language Solution", spanish: "Available", portuguese: "Available" },
-  { trackTitle: "Cloud Native Applications", spanish: "Available", portuguese: "Available" },
-  { trackTitle: "Use Azure OpenAI Like A Pro to Build Powerful AI Applications", spanish: "Available", portuguese: "Available" },
-  { trackTitle: "Intelligent App Development with Microsoft Copilot Stack", spanish: "Available", portuguese: "Available" },
-  { trackTitle: "GitHub Copilot – Hackathon", spanish: "Available", portuguese: "Available" },
-  { trackTitle: "Introduction To Building AI Apps", spanish: "Available", portuguese: "Available" },
-  { trackTitle: "Activate GenAI with Azure", spanish: "Available", portuguese: "Available" },
-  { trackTitle: "Low-Code for Pro-Dev in a Day", spanish: "Available", portuguese: "Available" }
-]
+const baseSeed = [
+  "GitHub Copilot Innovation Workshop",
+  "Build Intelligent Apps with Microsoft's Copilot Stack & Azure OpenAI",
+  "Get Started with OpenAI and Build Natural Language Solution",
+  "Cloud Native Applications",
+  "Use Azure OpenAI Like A Pro to Build Powerful AI Applications",
+  "Intelligent App Development with Microsoft Copilot Stack",
+  "GitHub Copilot – Hackathon",
+  "Introduction To Building AI Apps",
+  "Activate GenAI with Azure",
+  "Low-Code for Pro-Dev in a Day"
+];
+const initialLocalizedTracksData: LocalizedTrack[] = baseSeed.map(title => ({ trackTitle: title, languages: { spanish: 'Available', portuguese: 'Available' } }));
 
 const getAvailabilityBadge = (status: string) => {
   if (status === "Available") {
@@ -55,11 +56,9 @@ export default function LocalizedTracksPage() {
   const [localizedTracksData, setLocalizedTracksData] = useState<LocalizedTrack[]>(initialLocalizedTracksData)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
-  const [editFormData, setEditFormData] = useState<LocalizedTrack>({
-    trackTitle: "",
-    spanish: "",
-    portuguese: ""
-  })
+  const [editFormData, setEditFormData] = useState<LocalizedTrack>({ trackTitle: "", languages: { spanish: '', portuguese: '' } })
+  const [newLangName, setNewLangName] = useState('')
+  const [newLangStatus, setNewLangStatus] = useState('Available')
   const { toast } = useToast()
   const [saving, setSaving] = useState(false)
 
@@ -72,12 +71,24 @@ export default function LocalizedTracksPage() {
         const items = Array.isArray(res.data) ? res.data : []
         const localized = items.filter((i: any) => i.type === 'localizedTrack')
         if (localized.length > 0) {
-          setLocalizedTracksData(localized.map((i: any) => ({
-          sr: Number(i.sr || i.id || 0),
-          trackTitle: i.trackTitle || i.title || '',
-          spanish: i.spanish || 'Not Available',
-          portuguese: i.portuguese || 'Not Available'
-          })))
+          // Detect dynamic languages from keys other than trackTitle, sr, id, type
+          const mapped: LocalizedTrack[] = localized.map((i: any) => {
+            const langEntries: Record<string,string> = {}
+            Object.keys(i).forEach(k => {
+              if (!['trackTitle','title','sr','id','type'].includes(k)) {
+                const val = i[k]
+                if (typeof val === 'string') langEntries[k.toLowerCase()] = val || 'Not Available'
+              }
+            })
+            if (!langEntries['spanish'] && i.spanish) langEntries['spanish'] = i.spanish
+            if (!langEntries['portuguese'] && i.portuguese) langEntries['portuguese'] = i.portuguese
+            return {
+              sr: Number(i.sr || i.id || 0),
+              trackTitle: i.trackTitle || i.title || '',
+              languages: langEntries
+            }
+          })
+          setLocalizedTracksData(mapped)
         }
       } catch (err) {
         // ignore load errors for now
@@ -101,7 +112,10 @@ export default function LocalizedTracksPage() {
       setSaving(true)
       ;(async () => {
         try {
-          const payload = { ...editFormData, type: 'localizedTrack' }
+          // Flatten languages into payload keys
+          const langPayload: Record<string,string> = {}
+          Object.entries(editFormData.languages).forEach(([k,v]) => { langPayload[k] = v })
+          const payload = { trackTitle: editFormData.trackTitle, ...langPayload, type: 'localizedTrack' }
           if (editFormData.sr && editFormData.sr > 0) {
             await catalogService.update(editFormData.sr, payload)
           } else {
@@ -113,7 +127,7 @@ export default function LocalizedTracksPage() {
           setLocalizedTracksData(updatedData)
           setIsEditDialogOpen(false)
           setEditingIndex(null)
-          setEditFormData({ trackTitle: "", spanish: "", portuguese: "" })
+          setEditFormData({ trackTitle: "", languages: { spanish: '', portuguese: '' } })
           toast({ title: 'Saved', description: 'Localized track saved' })
         } catch (err) {
           toast({ title: 'Save failed', description: 'Could not save localized track', variant: 'destructive' })
@@ -128,19 +142,20 @@ export default function LocalizedTracksPage() {
       setSaving(true)
       ;(async () => {
         try {
-          const payload = { ...editFormData, type: 'localizedTrack' }
+          const langPayload: Record<string,string> = {}
+          Object.entries(editFormData.languages).forEach(([k,v]) => { langPayload[k] = v })
+          const payload = { trackTitle: editFormData.trackTitle, ...langPayload, type: 'localizedTrack' }
           const item = await catalogService.create(payload)
           const newEntry = {
             sr: Number(item.sr || item.id || localizedTracksData.length + 1),
             trackTitle: item.trackTitle || item.title || editFormData.trackTitle,
-            spanish: item.spanish || editFormData.spanish,
-            portuguese: item.portuguese || editFormData.portuguese
+            languages: { ...editFormData.languages }
           }
           const updated = [...localizedTracksData, newEntry].map((x, i) => ({ ...x, sr: i + 1 }))
           setLocalizedTracksData(updated)
           setIsEditDialogOpen(false)
           setEditingIndex(null)
-          setEditFormData({ trackTitle: '', spanish: '', portuguese: '' })
+          setEditFormData({ trackTitle: '', languages: { spanish: '', portuguese: '' } })
           toast({ title: 'Created', description: 'Localized track added' })
         } catch (err) {
           toast({ title: 'Save failed', description: 'Could not create localized track', variant: 'destructive' })
@@ -152,7 +167,9 @@ export default function LocalizedTracksPage() {
   const handleCancelEdit = () => {
     setIsEditDialogOpen(false)
     setEditingIndex(null)
-    setEditFormData({ trackTitle: "", spanish: "", portuguese: "" })
+    setEditFormData({ trackTitle: "", languages: { spanish: '', portuguese: '' } })
+    setNewLangName('')
+    setNewLangStatus('Available')
   }
 
   const handleDelete = (index: number) => {
@@ -178,7 +195,7 @@ export default function LocalizedTracksPage() {
           <div></div>
           <div className="flex items-center gap-2">
             {role === 'admin' && (
-              <Button size="sm" className="flex items-center gap-2" onClick={() => { setEditingIndex(null); setEditFormData({ trackTitle: '', spanish: '', portuguese: '' }); setIsEditDialogOpen(true) }}>
+              <Button size="sm" className="flex items-center gap-2" onClick={() => { setEditingIndex(null); setEditFormData({ trackTitle: '', languages: { spanish: '', portuguese: '' } }); setIsEditDialogOpen(true) }}>
                 <Plus className="h-4 w-4" />
                 Add Track
               </Button>
@@ -193,29 +210,43 @@ export default function LocalizedTracksPage() {
               <Label htmlFor="trackTitle" className="text-right">Track Title</Label>
               <Input id="trackTitle" value={editFormData.trackTitle} onChange={(e) => setEditFormData({ ...editFormData, trackTitle: e.target.value })} className="col-span-3" />
             </div>
+            {/* Existing language status selectors dynamically */}
+            {Object.keys(editFormData.languages).map(langKey => (
+              <div className="grid grid-cols-4 items-center gap-4" key={langKey}>
+                <Label className="text-right capitalize">{langKey}</Label>
+                <Select value={editFormData.languages[langKey]} onValueChange={(value) => setEditFormData(prev => ({ ...prev, languages: { ...prev.languages, [langKey]: value } }))}>
+                  <SelectTrigger className="col-span-3"><SelectValue placeholder="Select status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Available">Available</SelectItem>
+                    <SelectItem value="In Progress">In Progress</SelectItem>
+                    <SelectItem value="Not Available">Not Available</SelectItem>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+            {/* Add new language inline */}
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="spanish" className="text-right">Spanish</Label>
-              <Select value={editFormData.spanish} onValueChange={(value) => setEditFormData({ ...editFormData, spanish: value })}>
-                <SelectTrigger className="col-span-3"><SelectValue placeholder="Select status" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Available">Available</SelectItem>
-                  <SelectItem value="In Progress">In Progress</SelectItem>
-                  <SelectItem value="Not Available">Not Available</SelectItem>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="portuguese" className="text-right">Portuguese</Label>
-              <Select value={editFormData.portuguese} onValueChange={(value) => setEditFormData({ ...editFormData, portuguese: value })}>
-                <SelectTrigger className="col-span-3"><SelectValue placeholder="Select status" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Available">Available</SelectItem>
-                  <SelectItem value="In Progress">In Progress</SelectItem>
-                  <SelectItem value="Not Available">Not Available</SelectItem>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="text-right">Add Language</Label>
+              <div className="col-span-3 flex gap-2">
+                <Input placeholder="e.g., Chinese" value={newLangName} onChange={(e) => setNewLangName(e.target.value)} className="w-1/2" />
+                <Select value={newLangStatus} onValueChange={(v) => setNewLangStatus(v)}>
+                  <SelectTrigger className="w-1/2"><SelectValue placeholder="Status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Available">Available</SelectItem>
+                    <SelectItem value="In Progress">In Progress</SelectItem>
+                    <SelectItem value="Not Available">Not Available</SelectItem>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button type="button" variant="outline" disabled={!newLangName.trim()} onClick={() => {
+                  const key = newLangName.trim().toLowerCase();
+                  if (!key || editFormData.languages[key]) return;
+                  setEditFormData(prev => ({ ...prev, languages: { ...prev.languages, [key]: newLangStatus } }));
+                  setNewLangName('');
+                  setNewLangStatus('Available');
+                }}>Add</Button>
+              </div>
             </div>
           </div>
   </EntityEditDialog>
@@ -236,18 +267,21 @@ export default function LocalizedTracksPage() {
                 <Table>
                   <TableHeader className="sticky top-0 bg-background z-10">
                     <TableRow>
-                        <TableHead className="min-w-[300px]">Track Title</TableHead>
-                        <TableHead className="w-28 text-center">Spanish</TableHead>
-                        <TableHead className="w-28 text-center">Portuguese</TableHead>
-                        <TableHead className="w-32 text-center">Actions</TableHead>
-                      </TableRow>
+                      <TableHead className="min-w-[300px]">Track Title</TableHead>
+                      {/** Dynamically render language columns discovered in dataset */}
+                      {Array.from(new Set(localizedTracksData.flatMap(t => Object.keys(t.languages)))).map(lang => (
+                        <TableHead key={lang} className="w-28 text-center capitalize">{lang}</TableHead>
+                      ))}
+                      <TableHead className="w-32 text-center">Actions</TableHead>
+                    </TableRow>
                   </TableHeader>
                   <TableBody>
                     {localizedTracksData.map((track, index) => (
                       <TableRow key={index}>
                         <TableCell className="font-medium">{track.trackTitle}</TableCell>
-                        <TableCell className="text-center">{getAvailabilityBadge(track.spanish)}</TableCell>
-                        <TableCell className="text-center">{getAvailabilityBadge(track.portuguese)}</TableCell>
+                        {Array.from(new Set(localizedTracksData.flatMap(t => Object.keys(t.languages)))).map(lang => (
+                          <TableCell key={lang} className="text-center">{getAvailabilityBadge(track.languages[lang] || 'Not Available')}</TableCell>
+                        ))}
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-2">
                               {role === 'admin' && (
