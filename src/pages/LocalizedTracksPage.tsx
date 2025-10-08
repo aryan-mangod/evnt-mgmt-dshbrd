@@ -57,8 +57,7 @@ export default function LocalizedTracksPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [editFormData, setEditFormData] = useState<LocalizedTrack>({ trackTitle: "", languages: { spanish: '', portuguese: '' } })
-  const [newLangName, setNewLangName] = useState('')
-  const [newLangStatus, setNewLangStatus] = useState('Available')
+  // Removed inline per-track language addition; languages beyond spanish/portuguese are added globally
   const { toast } = useToast()
   const [saving, setSaving] = useState(false)
 
@@ -168,8 +167,6 @@ export default function LocalizedTracksPage() {
     setIsEditDialogOpen(false)
     setEditingIndex(null)
     setEditFormData({ trackTitle: "", languages: { spanish: '', portuguese: '' } })
-    setNewLangName('')
-    setNewLangStatus('Available')
   }
 
   const handleDelete = (index: number) => {
@@ -188,6 +185,42 @@ export default function LocalizedTracksPage() {
     }
   }
 
+  const handleAddGlobalLanguage = () => {
+    if (role !== 'admin') return
+    const name = window.prompt('Enter new language name (e.g., Chinese):')
+    if (!name) return
+    const key = name.trim().toLowerCase()
+    if (!key) return
+    // Check if language already exists in any track
+    const existing = localizedTracksData.some(t => Object.prototype.hasOwnProperty.call(t.languages, key))
+    if (existing) {
+      toast({ title: 'Language Exists', description: `${name} already present`, variant: 'default' })
+      return
+    }
+    setSaving(true)
+    ;(async () => {
+      try {
+        const updatedTracks: LocalizedTrack[] = []
+        for (const t of localizedTracksData) {
+          const newLangs = { ...t.languages, [key]: 'Not Available' }
+            // Persist update if record already stored
+          if (t.sr) {
+            try {
+              await catalogService.update(t.sr, { trackTitle: t.trackTitle, ...newLangs, type: 'localizedTrack' })
+            } catch (e) {
+              // ignore individual failure; we still update local state
+            }
+          }
+          updatedTracks.push({ ...t, languages: newLangs })
+        }
+        setLocalizedTracksData(updatedTracks)
+        toast({ title: 'Language Added', description: `${name} added globally with default Not Available` })
+      } finally {
+        setSaving(false)
+      }
+    })()
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -195,10 +228,16 @@ export default function LocalizedTracksPage() {
           <div></div>
           <div className="flex items-center gap-2">
             {role === 'admin' && (
-              <Button size="sm" className="flex items-center gap-2" onClick={() => { setEditingIndex(null); setEditFormData({ trackTitle: '', languages: { spanish: '', portuguese: '' } }); setIsEditDialogOpen(true) }}>
-                <Plus className="h-4 w-4" />
-                Add Track
-              </Button>
+              <>
+                <Button size="sm" className="flex items-center gap-2" onClick={() => { setEditingIndex(null); setEditFormData({ trackTitle: '', languages: { spanish: '', portuguese: '' } }); setIsEditDialogOpen(true) }}>
+                  <Plus className="h-4 w-4" />
+                  Add Track
+                </Button>
+                <Button size="sm" variant="outline" className="flex items-center gap-2" onClick={handleAddGlobalLanguage} disabled={saving}>
+                  <Globe className="h-4 w-4" />
+                  Add Language
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -210,11 +249,11 @@ export default function LocalizedTracksPage() {
               <Label htmlFor="trackTitle" className="text-right">Track Title</Label>
               <Input id="trackTitle" value={editFormData.trackTitle} onChange={(e) => setEditFormData({ ...editFormData, trackTitle: e.target.value })} className="col-span-3" />
             </div>
-            {/* Existing language status selectors dynamically */}
-            {Object.keys(editFormData.languages).map(langKey => (
+            {/* Fixed editable languages: Spanish & Portuguese */}
+            {['spanish','portuguese'].map(langKey => (
               <div className="grid grid-cols-4 items-center gap-4" key={langKey}>
                 <Label className="text-right capitalize">{langKey}</Label>
-                <Select value={editFormData.languages[langKey]} onValueChange={(value) => setEditFormData(prev => ({ ...prev, languages: { ...prev.languages, [langKey]: value } }))}>
+                <Select value={editFormData.languages[langKey] || 'Not Available'} onValueChange={(value) => setEditFormData(prev => ({ ...prev, languages: { ...prev.languages, [langKey]: value } }))}>
                   <SelectTrigger className="col-span-3"><SelectValue placeholder="Select status" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Available">Available</SelectItem>
@@ -225,31 +264,9 @@ export default function LocalizedTracksPage() {
                 </Select>
               </div>
             ))}
-            {/* Add new language inline */}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Add Language</Label>
-              <div className="col-span-3 flex gap-2">
-                <Input placeholder="e.g., Chinese" value={newLangName} onChange={(e) => setNewLangName(e.target.value)} className="w-1/2" />
-                <Select value={newLangStatus} onValueChange={(v) => setNewLangStatus(v)}>
-                  <SelectTrigger className="w-1/2"><SelectValue placeholder="Status" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Available">Available</SelectItem>
-                    <SelectItem value="In Progress">In Progress</SelectItem>
-                    <SelectItem value="Not Available">Not Available</SelectItem>
-                    <SelectItem value="Pending">Pending</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button type="button" variant="outline" disabled={!newLangName.trim()} onClick={() => {
-                  const key = newLangName.trim().toLowerCase();
-                  if (!key || editFormData.languages[key]) return;
-                  setEditFormData(prev => ({ ...prev, languages: { ...prev.languages, [key]: newLangStatus } }));
-                  setNewLangName('');
-                  setNewLangStatus('Available');
-                }}>Add</Button>
-              </div>
-            </div>
+            {/* Any additional languages are displayed read-only inside table; not editable here */}
           </div>
-  </EntityEditDialog>
+        </EntityEditDialog>
 
   <Card className="glass-card">
           <CardHeader>
@@ -258,7 +275,7 @@ export default function LocalizedTracksPage() {
               Localization Status
             </CardTitle>
             <CardDescription>
-              Monthly maintained tracks with Spanish and Portuguese language availability
+              Tracks with core Spanish & Portuguese statuses. Additional languages (added via Add Language) appear read-only and default to Not Available.
             </CardDescription>
           </CardHeader>
           <CardContent>
