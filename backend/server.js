@@ -424,10 +424,10 @@ app.post('/api/reset-password', (req, res) => {
 });
 
 // Users management endpoints (admin only for create/update/delete)
-app.get('/api/users', requireAuth, (req, res) => {
+// List users (admin only under SSO model)
+app.get('/api/users', requireAdmin, (req, res) => {
   const data = readData();
-  // return users without passwords
-  const users = (data.users || []).map((u) => ({ id: u.id, username: u.username, role: u.role }));
+  const users = (data.users || []).map((u) => ({ id: u.id, username: u.username, email: u.email, role: u.role }));
   res.json(users);
 });
 
@@ -436,62 +436,40 @@ app.post('/api/users', requireAdmin, (req, res) => {
   const data = readData();
   const users = data.users || [];
   const id = String(payload.id || `u_${Date.now()}`);
-  
-  // Validate required fields
-  if (!payload.email || !payload.username) {
-    return res.status(400).json({ success: false, error: 'Email and username are required' });
+
+  if (!payload.email) {
+    return res.status(400).json({ success: false, error: 'Email is required' });
   }
-  
-  // Check if email already exists
-  const existingUser = users.find(u => u && String(u.email || '').toLowerCase() === String(payload.email).toLowerCase());
+  const email = String(payload.email).toLowerCase();
+  const existingUser = users.find(u => u && String(u.email || '').toLowerCase() === email);
   if (existingUser) {
     return res.status(400).json({ success: false, error: 'Email already exists' });
   }
-  
-  // If admin provided a password, use it. Otherwise generate a secure temporary password
-  let tempPassword = null;
-  if (payload.password) {
-    const hashed = bcrypt.hashSync(String(payload.password), 8);
-    const newUser = { 
-      id, 
-      username: String(payload.username || ''), 
-      email: String(payload.email || '').toLowerCase(),
-      password: hashed, 
-      role: payload.role === 'admin' ? 'admin' : 'user', 
-      mustReset: false 
-    };
-    users.push(newUser);
-    data.users = users;
-    writeData(data);
-    return res.json({ success: true, user: { id: newUser.id, username: newUser.username, email: newUser.email, role: newUser.role } });
-  }
-  
-  // generate temporary password
-  tempPassword = crypto.randomBytes(6).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 12);
-  const hashedTemp = bcrypt.hashSync(String(tempPassword), 8);
-  const newUser = { 
-    id, 
-    username: String(payload.username || ''), 
-    email: String(payload.email || '').toLowerCase(),
-    password: hashedTemp, 
-    role: payload.role === 'admin' ? 'admin' : 'user', 
-    mustReset: true 
+  const username = String(payload.username || email.split('@')[0] || id);
+  const newUser = {
+    id,
+    username,
+    email,
+    role: payload.role === 'admin' ? 'admin' : 'user'
   };
   users.push(newUser);
   data.users = users;
   writeData(data);
-  // return the temporary password so admin can copy/share it
-  return res.json({ success: true, user: { id: newUser.id, username: newUser.username, email: newUser.email, role: newUser.role }, temporaryPassword: tempPassword });
+  return res.json({ success: true, user: { id: newUser.id, username: newUser.username, email: newUser.email, role: newUser.role } });
 });
 
 app.put('/api/users/:id', requireAdmin, (req, res) => {
   const id = String(req.params.id);
   const data = readData();
   const body = { ...req.body };
-  if (body.password) body.password = bcrypt.hashSync(String(body.password), 8);
+  // Ignore any password fields under SSO model
+  delete body.password;
+  delete body.mustReset;
+  if (body.email) body.email = String(body.email).toLowerCase();
   data.users = (data.users || []).map((u) => (String(u.id) === id ? { ...u, ...body } : u));
   writeData(data);
-  res.json({ success: true });
+  const updated = (data.users || []).find(u => String(u.id) === id);
+  res.json({ success: true, user: updated ? { id: updated.id, username: updated.username, email: updated.email, role: updated.role } : null });
 });
 
 // Logout: invalidate token

@@ -1,6 +1,6 @@
 import { DashboardLayout } from "@/components/DashboardLayout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, UserPlus, Edit, Trash2, Copy } from "lucide-react"
+import { Users, UserPlus, Edit, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -9,52 +9,44 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useEffect, useState } from "react"
+import { useAuth } from '@/components/AuthProvider'
+import { AccessDenied } from '@/components/AccessDenied'
 import api from "@/lib/api"
 import { useToast } from '@/hooks/use-toast'
 
 interface User {
   id: string;
-  name: string;
+  name: string; // derived from email prefix
   email: string;
-  status: string;
-  joined: string;
-  avatar: string;
   role?: string;
-  password?: string;
 }
 
 export default function UsersPage() {
+  const { userRole } = useAuth();
+  const role = userRole; // maintain variable name for existing logic
   const [users, setUsers] = useState<User[]>([]);
-  const [role, setRole] = useState<string | null>(null);
+
+  // Gate entire page: only admins may view
+  if (role !== 'admin') {
+    return <AccessDenied reason="Administrator access required" />
+  }
 
   useEffect(() => {
-    const r = localStorage.getItem('dashboard_role') || null;
-    setRole(r);
-  }, []);
-
-  useEffect(() => {
-    // fetch users from API (requires auth)
     (async () => {
       try {
         const res = await api.get('/api/users');
         if (Array.isArray(res.data)) {
-          setUsers(res.data.map((u: any) => ({ id: u.id, name: u.username || u.name || '', email: u.email || '', status: 'Active', joined: 'Just now', avatar: '/placeholder.svg', role: u.role || 'user' })) as User[]);
+          setUsers(res.data.map((u: any) => ({ id: u.id, name: u.username || (u.email ? u.email.split('@')[0] : ''), email: u.email || '', role: u.role || 'user' })) as User[]);
         }
-      } catch (err) {
-        // ignore — user will see local empty state
-      }
+      } catch {}
     })();
   }, []);
 
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [newUser, setNewUser] = useState({ name: "", email: "", status: "Active", role: 'user' });
-  // temporary passwords are kept in-memory and will vanish on refresh
-  const [tempPasswords, setTempPasswords] = useState<Record<string,string>>({});
+  const [newUser, setNewUser] = useState({ email: "", role: 'user' });
   const [csvError, setCsvError] = useState("");
-  const [showTempModal, setShowTempModal] = useState(false);
-  const [modalTemp, setModalTemp] = useState<{ userId: string; username?: string; password: string } | null>(null);
   const { toast } = useToast()
 
   const handleEditUser = (user: User) => {
@@ -74,14 +66,10 @@ export default function UsersPage() {
   };
 
   const handleSaveEdit = async () => {
-    if (!editingUser) return;
-    if (role !== 'admin') return;
+    if (!editingUser || role !== 'admin') return;
     try {
-      const payload: any = { username: editingUser.name, email: editingUser.email };
-      if ((editingUser as any).role) payload.role = (editingUser as any).role;
-      if ((editingUser as any).password) payload.password = (editingUser as any).password;
+      const payload: any = { username: editingUser.name || (editingUser.email ? editingUser.email.split('@')[0] : ''), email: editingUser.email, role: (editingUser as any).role || 'user' };
       const res = await api.put(`/api/users/${editingUser.id}`, payload);
-      // update local list using returned user when available
       if (res.data && res.data.user) {
         const u = res.data.user;
         setUsers(users.map(user => user.id === editingUser.id ? { ...user, name: u.username || editingUser.name, email: u.email || editingUser.email, role: u.role || (editingUser as any).role } : user));
@@ -90,40 +78,26 @@ export default function UsersPage() {
       }
       setIsEditDialogOpen(false);
       setEditingUser(null);
-    } catch (err) {
-      // ignore
-    }
+    } catch {}
   };
 
   const handleAddUser = async () => {
     if (role !== 'admin') return;
     try {
-  const payload: any = { username: newUser.name || `user-${Date.now()}`, email: newUser.email, role: (newUser as any).role || 'user' };
-  // password must not be provided by admin in UI per requirement — backend will generate temporary password when needed
+      const username = newUser.email ? newUser.email.split('@')[0] : `user-${Date.now()}`;
+      const payload: any = { username, email: newUser.email, role: (newUser as any).role || 'user' };
       const res = await api.post('/api/users', payload);
       if (res.data && res.data.user) {
         const created = res.data.user;
-        const newUserWithId = { id: created.id, name: created.username, email: created.email || newUser.email || '', status: 'Active', joined: 'Just now', avatar: '/placeholder.svg', role: created.role || (newUser as any).role };
+        const newUserWithId = { id: created.id, name: created.username || username, email: created.email || newUser.email || '', role: created.role || (newUser as any).role };
         setUsers([newUserWithId, ...users]);
-        // If backend returned a temporary password, store it in-memory keyed by user id
-        if (res.data.temporaryPassword) {
-          const tp = String(res.data.temporaryPassword);
-          setTempPasswords((s) => ({ ...s, [created.id]: tp }));
-          // show modal so admin can copy and confirm copying
-          setModalTemp({ userId: created.id, username: created.username, password: tp });
-          setShowTempModal(true);
-          toast({ title: 'Temporary password generated', description: 'Temporary password is shown in the modal — please copy it now' })
-        }
       } else {
-        // fallback: refetch
         const fetched = await api.get('/api/users');
-        if (Array.isArray(fetched.data)) setUsers(fetched.data.map((u: any) => ({ id: u.id, name: u.username || u.name || '', email: u.email || '', status: 'Active', joined: 'Just now', avatar: '/placeholder.svg', role: u.role || 'user' })) as User[]);
+        if (Array.isArray(fetched.data)) setUsers(fetched.data.map((u: any) => ({ id: u.id, name: u.username || (u.email ? u.email.split('@')[0] : ''), email: u.email || '', role: u.role || 'user' })) as User[]);
       }
-    } catch (err) {
-      // ignore
-    }
-  setNewUser({ name: '', email: '', status: 'Active', role: 'user' });
-  setIsAddDialogOpen(false);
+    } catch {}
+    setNewUser({ email: '', role: 'user' });
+    setIsAddDialogOpen(false);
   };
 
   // bulk upload removed per request
@@ -150,21 +124,10 @@ export default function UsersPage() {
                 <DialogHeader>
                   <DialogTitle>Add New User</DialogTitle>
                   <DialogDescription>
-                    Create a new user account. Fill in the details below.
+                    Create a new user. SSO will handle authentication; only email & role required.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="add-name" className="text-right">
-                      Name
-                    </Label>
-                    <Input
-                      id="add-name"
-                      value={newUser.name}
-                      onChange={(e) => setNewUser({...newUser, name: e.target.value})}
-                      className="col-span-3"
-                    />
-                  </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="add-email" className="text-right">
                       Email
@@ -178,22 +141,6 @@ export default function UsersPage() {
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="add-status" className="text-right">
-                      Status
-                    </Label>
-                    <Select value={newUser.status} onValueChange={(value) => setNewUser({...newUser, status: value})}>
-                      <SelectTrigger className="col-span-3">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Inactive">Inactive</SelectItem>
-                        <SelectItem value="Pending">Pending</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="add-role" className="text-right">Role</Label>
                     <Select value={newUser.role} onValueChange={(value) => setNewUser({...newUser, role: value})}>
                       <SelectTrigger className="col-span-3">
@@ -205,8 +152,6 @@ export default function UsersPage() {
                       </SelectContent>
                     </Select>
                   </div>
-
-                  {/* password is generated by the system; admin should not provide it here */}
                 </div>
                 <DialogFooter>
                   <Button type="submit" onClick={handleAddUser}>
@@ -226,17 +171,16 @@ export default function UsersPage() {
           <CardHeader>
             <CardTitle>All Users</CardTitle>
             <CardDescription>
-              Latest user registrations and activity
+              Manage users (SSO only)
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {users.map((user) => (
-                <div key={user.email} className="flex items-center justify-between p-4 rounded-lg border border-border/50 interactive-hover">
+                <div key={user.email} className="flex items-center justify-between p-4 rounded-lg border border-border/50">
                   <div className="flex items-center space-x-4">
                     <Avatar>
-                      <AvatarImage src={user.avatar} alt={user.name} />
-                      <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                      <AvatarFallback>{user.name ? user.name[0] : 'U'}</AvatarFallback>
                     </Avatar>
                     <div>
                       <p className="font-medium">{user.name}</p>
@@ -244,29 +188,10 @@ export default function UsersPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-4">
-                    <Badge variant={user.status === 'Active' ? 'default' : user.status === 'Inactive' ? 'destructive' : 'secondary'}>
-                      {user.status}
+                    {/* Role */}
+                    <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                      {user.role}
                     </Badge>
-                    <span className="text-sm text-muted-foreground">{user.joined}</span>
-                    {/* show temporary password if available (in-memory only) */}
-                    {tempPasswords[user.id] && (
-                      <div className="ml-2 flex items-center space-x-2 bg-muted/10 px-2 py-1 rounded">
-                        <span className="text-sm font-mono">{tempPasswords[user.id]}</span>
-                        <Button size="sm" variant="outline" onClick={async () => {
-                          try {
-                            await navigator.clipboard.writeText(tempPasswords[user.id]);
-                            // remove after copy so it vanishes
-                            setTempPasswords((s) => { const n = { ...s }; delete n[user.id]; return n; });
-                            toast({ title: 'Password copied' });
-                          } catch (e) {
-                            toast({ title: 'Copy failed' });
-                          }
-                        }}>
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    )}
-                    
                     {/* Action Buttons */}
                       <div className="flex items-center space-x-2">
                       {/* Edit Button with Dialog */}
@@ -314,21 +239,6 @@ export default function UsersPage() {
                                 />
                               </div>
                               <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="edit-status" className="text-right">
-                                  Status
-                                </Label>
-                                <Select value={editingUser.status} onValueChange={(value) => setEditingUser({...editingUser, status: value})}>
-                                  <SelectTrigger className="col-span-3">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="Active">Active</SelectItem>
-                                    <SelectItem value="Inactive">Inactive</SelectItem>
-                                    <SelectItem value="Pending">Pending</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="edit-role" className="text-right">Role</Label>
                                 <Select value={(editingUser as any).role || 'user'} onValueChange={(value) => setEditingUser({...editingUser, role: value})}>
                                   <SelectTrigger className="col-span-3">
@@ -339,11 +249,6 @@ export default function UsersPage() {
                                     <SelectItem value="admin">Admin</SelectItem>
                                   </SelectContent>
                                 </Select>
-                              </div>
-
-                              <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="edit-password" className="text-right">Password</Label>
-                                <Input id="edit-password" type="password" value={(editingUser as any).password || ''} onChange={(e) => setEditingUser({...editingUser, password: e.target.value})} className="col-span-3" />
                               </div>
                             </div>
                           )}
@@ -372,37 +277,7 @@ export default function UsersPage() {
             </div>
           </CardContent>
         </Card>
-        {/* Temporary password modal shown immediately after user creation */}
-        <Dialog open={showTempModal} onOpenChange={(v) => { if (!v) { setShowTempModal(false); setModalTemp(null); } }}>
-          <DialogContent className="sm:max-w-[420px]">
-            <DialogHeader>
-              <DialogTitle>Temporary password</DialogTitle>
-              <DialogDescription>
-                Copy the temporary password below and share it with the user. It will vanish on refresh.
-              </DialogDescription>
-            </DialogHeader>
-            {modalTemp && (
-              <div className="py-4">
-                <div className="mb-2 text-sm text-muted-foreground">User: {modalTemp.username}</div>
-                <div className="flex items-center justify-between bg-muted/10 px-3 py-2 rounded">
-                  <span className="font-mono text-lg">{modalTemp.password}</span>
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline" onClick={async () => { try { await navigator.clipboard.writeText(modalTemp.password); toast({ title: 'Password copied' }); } catch { toast({ title: 'Copy failed' }); } }}>
-                      Copy
-                    </Button>
-                    <Button size="sm" onClick={() => {
-                      // confirm copied: remove temp value and close modal
-                      setTempPasswords((s) => { const n = { ...s }; delete n[modalTemp.userId]; return n; });
-                      setShowTempModal(false);
-                      setModalTemp(null);
-                      toast({ title: 'Temporary password cleared from view' });
-                    }}>I copied it</Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+        {/* Temporary password logic removed for SSO-only flow */}
       </div>
     </DashboardLayout>
   )

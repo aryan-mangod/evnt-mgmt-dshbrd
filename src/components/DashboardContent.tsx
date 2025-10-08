@@ -390,7 +390,7 @@ export function DashboardContent() {
                 <div className="text-right">
                   <p className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-1">Top 25 Tracks</p>
                   <p className="text-3xl font-bold text-slate-900 dark:text-white">
-                    <InlineMetric metricKey="dashboard.tracksHealthPercentage" value={liveMetrics.tracksHealthPercentage} />%
+                    <InlineMetric metricKey="dashboard.tracksHealthPercentage" value={liveMetrics.tracksHealthPercentage} readOnly />%
                   </p>
                 </div>
               </div>

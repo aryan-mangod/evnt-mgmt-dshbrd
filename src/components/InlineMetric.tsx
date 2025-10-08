@@ -8,9 +8,10 @@ interface InlineMetricProps {
   metricKey: string
   value: string | number
   onValue?: (n: number) => void
+  readOnly?: boolean
 }
 
-export default function InlineMetric({ metricKey, value, onValue }: InlineMetricProps) {
+export default function InlineMetric({ metricKey, value, onValue, readOnly }: InlineMetricProps) {
   const { userRole: role } = useAuth()
   const [editing, setEditing] = useState(false)
   const [current, setCurrent] = useState(String(value ?? ''))
@@ -61,7 +62,9 @@ export default function InlineMetric({ metricKey, value, onValue }: InlineMetric
     setEditing(false)
   }
 
-  if (role !== 'admin') return <span>{current}</span>
+  const forceReadOnly = readOnly || metricKey === 'dashboard.tracksHealthPercentage'
+
+  if (role !== 'admin' || forceReadOnly) return <span>{current}</span>
 
   return (
     <span className="inline-flex items-center gap-2">
