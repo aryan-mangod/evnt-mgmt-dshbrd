@@ -1,5 +1,5 @@
 import { useMsal } from "@azure/msal-react";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 interface AuthContextType {
   /** True only when BOTH MSAL sign-in happened and backend authorization succeeded */
@@ -48,23 +48,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     || (b2cUser as any)?.idTokenClaims?.email
     || b2cUser?.username;
 
-  // Function to validate B2C user against backend
+  // Track attempts per email to avoid infinite re-validation loops
+  const attemptRef = useRef<Record<string, number>>({});
+  const validatingRef = useRef(false);
+  const MAX_ATTEMPTS = 2; // total tries (initial + 1 retry)
+  const TIMEOUT_MS = 8000; // 8 seconds per attempt
+
   const validateUserInBackend = async (email: string) => {
+    if (!email) return;
+    const attempts = attemptRef.current[email] || 0;
+    if (attempts >= MAX_ATTEMPTS) {
+      console.log('Skipping validation — max attempts reached for', email);
+      return;
+    }
+    if (validatingRef.current) {
+      console.log('Validation already in progress; skipping concurrent call');
+      return;
+    }
+    validatingRef.current = true;
+    attemptRef.current[email] = attempts + 1;
     let timeoutId: number | undefined;
     try {
       setPhase('validating-backend');
       setIsLoading(true);
-      setAuthError(null);
-      console.log('Validating user with email:', email);
+      if (attempts === 0) setAuthError(null); // clear error only on first attempt
+      console.log(`Validating user (attempt ${attemptRef.current[email]} of ${MAX_ATTEMPTS}) with email:`, email);
       const apiUrl = window.location.hostname === 'localhost'
         ? 'http://localhost:4000/api/validate-b2c-user'
         : '/api/validate-b2c-user';
-      console.log('API URL:', apiUrl);
-
-      // Implement a timeout (15s) to prevent infinite spinner if network hangs
       const controller = new AbortController();
-      timeoutId = window.setTimeout(() => controller.abort(), 15000);
-
+      timeoutId = window.setTimeout(() => controller.abort(), TIMEOUT_MS);
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -72,11 +85,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
-
       let result: any = {};
-      try { result = await response.json(); } catch { /* ignore JSON parse errors */ }
+      try { result = await response.json(); } catch {}
       console.log('API Response:', { status: response.status, result });
-
       if (response.ok && result.success) {
         localStorage.setItem('authToken', result.token);
         const cacheEntry = { email, role: result.user.role, token: result.token, user: result.user, expiresAt: Date.now() + 10 * 60 * 1000 };
@@ -87,19 +98,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAuthError(null);
         console.log('✅ User authorized successfully');
       } else {
-        // Distinguish 403 (user not found) from other errors
         if (response.status === 403) {
           setAuthError(result.error || 'User not found in authorized list');
         } else if (response.status === 400) {
           setAuthError(result.error || 'Invalid request');
         } else if (response.status === 500) {
           setAuthError(result.error || 'Server error during validation');
+        } else if (response.status === 0) {
+          setAuthError('Network error');
         } else {
           setAuthError(result.error || 'User not authorized');
         }
         setIsAuthorized(false);
         localStorage.removeItem('authToken');
         console.log('❌ User authorization failed');
+        // If we still have attempts left and error is transient (not 403 user not found), schedule one retry
+        if (attemptRef.current[email] < MAX_ATTEMPTS && response.status !== 403) {
+          console.log('Scheduling retry in 800ms...');
+          setTimeout(() => validateUserInBackend(email), 800);
+        }
       }
     } catch (error: any) {
       if (timeoutId) clearTimeout(timeoutId);
@@ -113,8 +130,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setIsAuthorized(false);
       localStorage.removeItem('authToken');
+      if (attemptRef.current[email] < MAX_ATTEMPTS) {
+        console.log('Scheduling retry after exception in 800ms...');
+        setTimeout(() => validateUserInBackend(email), 800);
+      }
     } finally {
       if (timeoutId) clearTimeout(timeoutId);
+      validatingRef.current = false;
       setIsLoading(false);
       setPhase('ready');
     }
