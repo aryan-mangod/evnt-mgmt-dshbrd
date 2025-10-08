@@ -57,7 +57,7 @@ export default function LocalizedTracksPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [editFormData, setEditFormData] = useState<LocalizedTrack>({ trackTitle: "", languages: { spanish: '', portuguese: '' } })
-  // Removed inline per-track language addition; languages beyond spanish/portuguese are added globally
+  // Only Spanish & Portuguese are supported.
   const { toast } = useToast()
   const [saving, setSaving] = useState(false)
 
@@ -70,23 +70,14 @@ export default function LocalizedTracksPage() {
         const items = Array.isArray(res.data) ? res.data : []
         const localized = items.filter((i: any) => i.type === 'localizedTrack')
         if (localized.length > 0) {
-          // Detect dynamic languages from keys other than trackTitle, sr, id, type
-          const mapped: LocalizedTrack[] = localized.map((i: any) => {
-            const langEntries: Record<string,string> = {}
-            Object.keys(i).forEach(k => {
-              if (!['trackTitle','title','sr','id','type'].includes(k)) {
-                const val = i[k]
-                if (typeof val === 'string') langEntries[k.toLowerCase()] = val || 'Not Available'
-              }
-            })
-            if (!langEntries['spanish'] && i.spanish) langEntries['spanish'] = i.spanish
-            if (!langEntries['portuguese'] && i.portuguese) langEntries['portuguese'] = i.portuguese
-            return {
-              sr: Number(i.sr || i.id || 0),
-              trackTitle: i.trackTitle || i.title || '',
-              languages: langEntries
+          const mapped: LocalizedTrack[] = localized.map((i: any) => ({
+            sr: Number(i.sr || i.id || 0),
+            trackTitle: i.trackTitle || i.title || '',
+            languages: {
+              spanish: typeof i.spanish === 'string' ? i.spanish : 'Not Available',
+              portuguese: typeof i.portuguese === 'string' ? i.portuguese : 'Not Available'
             }
-          })
+          }))
           setLocalizedTracksData(mapped)
         }
       } catch (err) {
@@ -111,10 +102,8 @@ export default function LocalizedTracksPage() {
       setSaving(true)
       ;(async () => {
         try {
-          // Flatten languages into payload keys
-          const langPayload: Record<string,string> = {}
-          Object.entries(editFormData.languages).forEach(([k,v]) => { langPayload[k] = v })
-          const payload = { trackTitle: editFormData.trackTitle, ...langPayload, type: 'localizedTrack' }
+          // Only persist spanish & portuguese
+          const payload = { trackTitle: editFormData.trackTitle, spanish: editFormData.languages.spanish || 'Not Available', portuguese: editFormData.languages.portuguese || 'Not Available', type: 'localizedTrack' }
           if (editFormData.sr && editFormData.sr > 0) {
             await catalogService.update(editFormData.sr, payload)
           } else {
@@ -141,9 +130,7 @@ export default function LocalizedTracksPage() {
       setSaving(true)
       ;(async () => {
         try {
-          const langPayload: Record<string,string> = {}
-          Object.entries(editFormData.languages).forEach(([k,v]) => { langPayload[k] = v })
-          const payload = { trackTitle: editFormData.trackTitle, ...langPayload, type: 'localizedTrack' }
+          const payload = { trackTitle: editFormData.trackTitle, spanish: editFormData.languages.spanish || 'Not Available', portuguese: editFormData.languages.portuguese || 'Not Available', type: 'localizedTrack' }
           const item = await catalogService.create(payload)
           const newEntry = {
             sr: Number(item.sr || item.id || localizedTracksData.length + 1),
@@ -185,41 +172,7 @@ export default function LocalizedTracksPage() {
     }
   }
 
-  const handleAddGlobalLanguage = () => {
-    if (role !== 'admin') return
-    const name = window.prompt('Enter new language name (e.g., Chinese):')
-    if (!name) return
-    const key = name.trim().toLowerCase()
-    if (!key) return
-    // Check if language already exists in any track
-    const existing = localizedTracksData.some(t => Object.prototype.hasOwnProperty.call(t.languages, key))
-    if (existing) {
-      toast({ title: 'Language Exists', description: `${name} already present`, variant: 'default' })
-      return
-    }
-    setSaving(true)
-    ;(async () => {
-      try {
-        const updatedTracks: LocalizedTrack[] = []
-        for (const t of localizedTracksData) {
-          const newLangs = { ...t.languages, [key]: 'Not Available' }
-            // Persist update if record already stored
-          if (t.sr) {
-            try {
-              await catalogService.update(t.sr, { trackTitle: t.trackTitle, ...newLangs, type: 'localizedTrack' })
-            } catch (e) {
-              // ignore individual failure; we still update local state
-            }
-          }
-          updatedTracks.push({ ...t, languages: newLangs })
-        }
-        setLocalizedTracksData(updatedTracks)
-        toast({ title: 'Language Added', description: `${name} added globally with default Not Available` })
-      } finally {
-        setSaving(false)
-      }
-    })()
-  }
+  // Removed Add Global Language functionality per updated requirements.
 
   return (
     <DashboardLayout>
@@ -228,16 +181,10 @@ export default function LocalizedTracksPage() {
           <div></div>
           <div className="flex items-center gap-2">
             {role === 'admin' && (
-              <>
-                <Button size="sm" className="flex items-center gap-2" onClick={() => { setEditingIndex(null); setEditFormData({ trackTitle: '', languages: { spanish: '', portuguese: '' } }); setIsEditDialogOpen(true) }}>
-                  <Plus className="h-4 w-4" />
-                  Add Track
-                </Button>
-                <Button size="sm" variant="outline" className="flex items-center gap-2" onClick={handleAddGlobalLanguage} disabled={saving}>
-                  <Globe className="h-4 w-4" />
-                  Add Language
-                </Button>
-              </>
+              <Button size="sm" className="flex items-center gap-2" onClick={() => { setEditingIndex(null); setEditFormData({ trackTitle: '', languages: { spanish: '', portuguese: '' } }); setIsEditDialogOpen(true) }}>
+                <Plus className="h-4 w-4" />
+                Add Track
+              </Button>
             )}
           </div>
         </div>
@@ -275,7 +222,7 @@ export default function LocalizedTracksPage() {
               Localization Status
             </CardTitle>
             <CardDescription>
-              Tracks with core Spanish & Portuguese statuses. Additional languages (added via Add Language) appear read-only and default to Not Available.
+              Tracks with Spanish & Portuguese localization status.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -285,10 +232,8 @@ export default function LocalizedTracksPage() {
                   <TableHeader className="sticky top-0 bg-background z-10">
                     <TableRow>
                       <TableHead className="min-w-[300px]">Track Title</TableHead>
-                      {/** Dynamically render language columns discovered in dataset */}
-                      {Array.from(new Set(localizedTracksData.flatMap(t => Object.keys(t.languages)))).map(lang => (
-                        <TableHead key={lang} className="w-28 text-center capitalize">{lang}</TableHead>
-                      ))}
+                      <TableHead className="w-28 text-center capitalize">Spanish</TableHead>
+                      <TableHead className="w-32 text-center capitalize">Portuguese</TableHead>
                       <TableHead className="w-32 text-center">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -296,9 +241,8 @@ export default function LocalizedTracksPage() {
                     {localizedTracksData.map((track, index) => (
                       <TableRow key={index}>
                         <TableCell className="font-medium">{track.trackTitle}</TableCell>
-                        {Array.from(new Set(localizedTracksData.flatMap(t => Object.keys(t.languages)))).map(lang => (
-                          <TableCell key={lang} className="text-center">{getAvailabilityBadge(track.languages[lang] || 'Not Available')}</TableCell>
-                        ))}
+                        <TableCell className="text-center">{getAvailabilityBadge(track.languages.spanish || 'Not Available')}</TableCell>
+                        <TableCell className="text-center">{getAvailabilityBadge(track.languages.portuguese || 'Not Available')}</TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-2">
                               {role === 'admin' && (
