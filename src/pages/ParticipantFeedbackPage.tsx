@@ -6,6 +6,7 @@ import { Plus, X, ChevronLeft, ChevronRight, Trash2, Eye } from "lucide-react"
 import { FileUploadModal } from "@/components/FileUploadModal"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "@/hooks/use-toast"
+import api from "@/lib/api"
 // Simplified: upload-only screen for feedback screenshots
 
 export default function ParticipantFeedbackPage() {
@@ -57,17 +58,9 @@ export default function ParticipantFeedbackPage() {
     }
 
     try {
-      const token = localStorage.getItem('dashboard_token')
-      
-      const response = await fetch(`/api/reviews/${itemId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
+      const response = await api.delete(`/api/reviews/${itemId}`)
 
-      if (response.ok) {
+      if (response.status === 200) {
         // Remove item from local state
         setItems(prev => prev.filter(item => item.id !== itemId))
         toast({
