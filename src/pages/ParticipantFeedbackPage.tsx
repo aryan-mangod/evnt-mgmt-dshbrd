@@ -89,7 +89,7 @@ export default function ParticipantFeedbackPage() {
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Feedback Gallery</h1>
-            <p className="text-muted-foreground">Latest 6 feedback photos from participants</p>
+            <p className="text-muted-foreground">Feedback from participants</p>
           </div>
           {role === 'admin' && (
             <FileUploadModal
@@ -106,38 +106,50 @@ export default function ParticipantFeedbackPage() {
         </div>
 
         {/* Gallery Grid - 2 rows x 3 columns */}
-        <div className="grid grid-cols-3 gap-4 max-w-4xl">
+        <div className="grid grid-cols-3 gap-6 max-w-6xl">
           {imageItems.map((item, index) => (
             <div 
               key={item.id} 
-              className="relative group cursor-pointer aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800 hover:shadow-xl hover:scale-[1.02] transition-all duration-300"
+              className="relative group cursor-pointer overflow-hidden rounded-lg bg-white dark:bg-gray-900 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-200 dark:border-gray-700"
             >
+              {/* Event title at the top */}
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                  {item.eventName || `Feedback ${index + 1}`}
+                </h3>
+              </div>
+              
+              {/* Image container with proper aspect ratio */}
+              <div className="aspect-[4/3] overflow-hidden">
                 <img 
-                src={item.path} 
-                alt={item.eventName || `Feedback ${index + 1}`}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                onClick={() => openModal(item.path, index)}
-              />              {/* Hover overlay with enhanced visibility */}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300" />
+                  src={item.path} 
+                  alt={item.eventName || `Feedback ${index + 1}`}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  onClick={() => openModal(item.path, index)}
+                />
+              </div>
+              
+              {/* Hover overlay */}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
               
               {/* Action buttons for admin */}
               {role === 'admin' && (
-                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="absolute top-14 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <Button
                     size="icon"
                     variant="secondary"
-                    className="h-8 w-8 bg-white/20 hover:bg-white/40 backdrop-blur-sm"
+                    className="h-8 w-8 bg-white/90 hover:bg-white backdrop-blur-sm shadow-md"
                     onClick={(e) => {
                       e.stopPropagation()
                       openModal(item.path, index)
                     }}
                   >
-                    <Eye className="h-4 w-4 text-white" />
+                    <Eye className="h-4 w-4 text-gray-700" />
                   </Button>
                   <Button
                     size="icon"
                     variant="destructive"
-                    className="h-8 w-8 bg-red-500/80 hover:bg-red-600/90 backdrop-blur-sm"
+                    className="h-8 w-8 bg-red-500 hover:bg-red-600 backdrop-blur-sm shadow-md"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleDelete(item.id, item.eventName || `Feedback ${index + 1}`)
@@ -147,45 +159,9 @@ export default function ParticipantFeedbackPage() {
                   </Button>
                 </div>
               )}
-              
-              {/* Enhanced bottom info bar */}
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <p className="text-white text-sm font-medium truncate mb-1">
-                  {item.eventName || `Feedback ${index + 1}`}
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-white/80 text-xs">Click to view full size</span>
-                  {role !== 'admin' && (
-                    <Eye className="h-4 w-4 text-white/60" />
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-          
-          {/* Empty placeholders if less than 6 images - only show for admin */}
-          {role === 'admin' && Array.from({ length: Math.max(0, 6 - imageItems.length) }).map((_, index) => (
-            <div 
-              key={`empty-${index}`}
-              className="aspect-square border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center bg-gray-50 dark:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-200"
-            >
-              <div className="text-center text-gray-400 dark:text-gray-500">
-                <Plus className="h-8 w-8 mx-auto mb-2" />
-                <p className="text-sm">Upload feedback</p>
-              </div>
             </div>
           ))}
         </div>
-
-        {imageItems.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 dark:text-gray-500 mb-4">
-              <Plus className="h-16 w-16 mx-auto mb-4" />
-              <h3 className="text-lg font-medium">No feedback photos yet</h3>
-              <p className="text-sm">Upload participant feedback screenshots to create your gallery</p>
-            </div>
-          </div>
-        )}
 
         {/* Enhanced Image Modal */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
