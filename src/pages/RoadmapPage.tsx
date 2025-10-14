@@ -63,10 +63,29 @@ export default function RoadmapPage() {
       try {
         const list = await catalogService.list()
         if (!mounted) return
+        console.log('Catalog list:', list) // Debug log
         const roadmapItems = list.filter((i: any) => i.type === 'roadmapItem')
-        setRoadmapData(roadmapItems.map((r: any, idx: number) => ({ id: Number(r.sr || r.id || idx + 1), trackTitle: r.trackTitle || r.title || '', phase: r.phase || '', eta: r.eta || 'NA' })))
+        console.log('Filtered roadmap items:', roadmapItems) // Debug log
+        if (roadmapItems.length === 0) {
+          // If no roadmap items exist, use initial data
+          setRoadmapData(initialRoadmapData)
+        } else {
+          setRoadmapData(roadmapItems.map((r: any, idx: number) => ({ 
+            id: Number(r.sr || r.id || idx + 1), 
+            trackTitle: r.trackTitle || r.title || '', 
+            phase: r.phase || '', 
+            eta: r.eta || 'NA' 
+          })))
+        }
       } catch (err) {
-        // ignore
+        console.error('Error loading roadmap data:', err)
+        // Use initial data as fallback
+        setRoadmapData(initialRoadmapData)
+        toast({
+          title: "Warning",
+          description: "Could not load roadmap data from server. Using default data.",
+          variant: "default"
+        })
       }
     })()
     return () => { mounted = false }
@@ -78,30 +97,30 @@ export default function RoadmapPage() {
     setIsEditDialogOpen(true)
   }
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editForm.trackTitle || editForm.trackTitle.trim().length < 3) {
-      toast({ title: 'Validation', description: 'Track title is required (min 3 chars)', variant: 'destructive' })
-      return
+      throw new Error('Track title is required (min 3 chars)')
     }
-    setSaving(true)
-    ;(async () => {
-      try {
-        const payload = { ...editForm, type: 'roadmapItem' }
-        if (editingItem && editingItem.id && editingItem.id > 0) {
-          await catalogService.update(editingItem.id, payload)
-          setRoadmapData(prevData => prevData.map(track => track.id === editingItem.id ? { ...editForm } : track))
-        } else {
-          const resItem = await catalogService.create(payload)
-          const newItem = { ...editForm, id: Number(resItem && (resItem.sr || resItem.id) || Date.now()) }
-          setRoadmapData(prev => [...prev, newItem])
-        }
-        setIsEditDialogOpen(false)
-        setEditingItem(null)
-        toast({ title: 'Saved', description: 'Roadmap updated' })
-      } catch (err) {
-        toast({ title: 'Save failed', description: 'Could not save roadmap item', variant: 'destructive' })
-      } finally { setSaving(false) }
-    })()
+    
+    try {
+      const payload = { ...editForm, type: 'roadmapItem' }
+      console.log('Saving roadmap item:', payload) // Debug log
+      
+      if (editingItem && editingItem.id && editingItem.id > 0) {
+        await catalogService.update(editingItem.id, payload)
+        setRoadmapData(prevData => prevData.map(track => track.id === editingItem.id ? { ...editForm } : track))
+      } else {
+        const resItem = await catalogService.create(payload)
+        console.log('Create response:', resItem) // Debug log
+        const newItem = { ...editForm, id: Number(resItem && (resItem.sr || resItem.id) || Date.now()) }
+        setRoadmapData(prev => [...prev, newItem])
+      }
+      setIsEditDialogOpen(false)
+      setEditingItem(null)
+    } catch (err) {
+      console.error('Save error:', err)
+      throw err // Re-throw to let EntityEditDialog handle the error display
+    }
   }
 
   const handleCancelEdit = () => {
@@ -121,11 +140,17 @@ export default function RoadmapPage() {
     if (window.confirm(`Are you sure you want to delete "${item.trackTitle}"?`)) {
       ;(async () => {
         try {
+          console.log('Deleting roadmap item:', item) // Debug log
           if (item.id) await catalogService.remove(item.id)
           setRoadmapData(prevData => prevData.filter(track => track.id !== item.id))
-          toast({ title: 'Deleted', description: 'Roadmap item removed' })
+          toast({ title: 'Deleted', description: 'Roadmap item removed successfully' })
         } catch (err) {
-          toast({ title: 'Delete failed', description: 'Could not delete roadmap item', variant: 'destructive' })
+          console.error('Delete error:', err)
+          toast({ 
+            title: 'Delete failed', 
+            description: err instanceof Error ? err.message : 'Could not delete roadmap item', 
+            variant: 'destructive' 
+          })
         }
       })()
     }
@@ -222,21 +247,12 @@ export default function RoadmapPage() {
 
         {/* Edit Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <EntityEditDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} title={editingItem ? `Edit Roadmap: ${editingItem.trackTitle}` : 'Add Roadmap Item'} saving={saving} onSave={async () => {
-              if (!isNonEmptyString(editForm.trackTitle, 3)) throw new Error('Track title is required (min 3 chars)')
-              const payload = { ...editForm, type: 'roadmapItem' }
-              if (editingItem && editingItem.id && editingItem.id > 0) {
-                await catalogService.update(editingItem.id, payload)
-                setRoadmapData(prevData => prevData.map(track => track.id === editingItem.id ? { ...editForm } : track))
-              } else {
-                const resItem = await catalogService.create(payload)
-                const newItem = { ...editForm, id: Number(resItem && (resItem.sr || resItem.id) || Date.now()) }
-                setRoadmapData(prev => [...prev, newItem])
-              }
-              setIsEditDialogOpen(false)
-              setEditingItem(null)
-              toast({ title: 'Saved', description: 'Roadmap updated' })
-            }}>
+          <EntityEditDialog 
+            open={isEditDialogOpen} 
+            onOpenChange={setIsEditDialogOpen} 
+            title={editingItem?.id ? `Edit Roadmap: ${editingItem.trackTitle}` : 'Add Roadmap Item'} 
+            saving={saving} 
+            onSave={handleSaveEdit}>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="trackTitle" className="text-right">Track Title</Label>
