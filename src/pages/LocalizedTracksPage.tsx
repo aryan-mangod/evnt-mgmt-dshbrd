@@ -232,7 +232,7 @@ export default function LocalizedTracksPage() {
                   <TableHeader className="sticky top-0 bg-background z-10">
                     <TableRow>
                       <TableHead className="min-w-[300px]">Track Title</TableHead>
-                      <TableHead className="w-28 text-center capitalize">Spanish</TableHead>
+                      <TableHead className="w-32 text-center capitalize">Spanish</TableHead>
                       <TableHead className="w-32 text-center capitalize">Portuguese</TableHead>
                       <TableHead className="w-32 text-center">Actions</TableHead>
                     </TableRow>

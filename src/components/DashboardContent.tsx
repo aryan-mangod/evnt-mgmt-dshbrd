@@ -416,7 +416,7 @@ export function DashboardContent() {
                   </p>
                 </div>
               </div>
-              <p className="text-slate-700 dark:text-slate-300 font-medium">Participants</p>
+              <p className="text-slate-700 dark:text-slate-300 font-medium">Attendees</p>
             </div>
           </div>
         </div>
